@@ -10,6 +10,7 @@
         <select v-model="settings.ai_provider" class="select">
           <option value="claude">Anthropic Claude</option>
           <option value="openai">OpenAI GPT-4</option>
+          <option value="gemini">Google Gemini</option>
           <option value="ollama">Ollama (Local)</option>
         </select>
       </div>
@@ -31,6 +32,16 @@
           v-model="settings.openai_api_key"
           class="input"
           placeholder="sk-..."
+        />
+      </div>
+
+      <div class="form-group" v-if="settings.ai_provider === 'gemini'">
+        <label class="label">Gemini API Key</label>
+        <input
+          type="password"
+          v-model="settings.gemini_api_key"
+          class="input"
+          placeholder="AI..."
         />
       </div>
 
@@ -93,6 +104,7 @@ export default {
       ai_provider: 'claude',
       claude_api_key: '',
       openai_api_key: '',
+      gemini_api_key: '',
       ollama_endpoint: 'http://ollama:11434',
       default_currency: 'NOK'
     })
@@ -107,6 +119,7 @@ export default {
           ai_provider: data.ai_provider || 'claude',
           claude_api_key: data.claude_api_key || '',
           openai_api_key: data.openai_api_key || '',
+          gemini_api_key: data.gemini_api_key || '',
           ollama_endpoint: data.ollama_endpoint || 'http://ollama:11434',
           default_currency: data.default_currency || 'NOK'
         }
@@ -123,7 +136,8 @@ export default {
         const { data } = await api.testAI(
           settings.value.ai_provider,
           settings.value.ai_provider === 'claude' ? settings.value.claude_api_key :
-          settings.value.ai_provider === 'openai' ? settings.value.openai_api_key : null,
+          settings.value.ai_provider === 'openai' ? settings.value.openai_api_key :
+          settings.value.ai_provider === 'gemini' ? settings.value.gemini_api_key : null,
           settings.value.ollama_endpoint
         )
         testResult.value = data

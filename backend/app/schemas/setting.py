@@ -7,6 +7,7 @@ class SettingUpdate(BaseModel):
     ai_provider: Optional[str] = None
     claude_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
     ollama_endpoint: Optional[str] = None
     default_currency: Optional[str] = None
     setup_completed: Optional[bool] = None
@@ -16,6 +17,7 @@ class SettingResponse(BaseModel):
     ai_provider: str
     claude_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
     ollama_endpoint: str
     default_currency: str
     setup_completed: bool = False

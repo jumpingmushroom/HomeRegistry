@@ -4,7 +4,7 @@ from typing import Optional
 from ..database import get_db
 from ..models.setting import Setting
 from ..schemas.setting import SettingUpdate, SettingResponse, TestAIRequest, TestAIResponse
-from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider
+from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider, GeminiProvider
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -32,6 +32,7 @@ async def get_settings(db: Session = Depends(get_db)):
     ai_provider = get_setting_value(db, "ai_provider", "claude")
     claude_key = get_setting_value(db, "claude_api_key")
     openai_key = get_setting_value(db, "openai_api_key")
+    gemini_key = get_setting_value(db, "gemini_api_key")
     ollama_endpoint = get_setting_value(db, "ollama_endpoint", "http://ollama:11434")
     default_currency = get_setting_value(db, "default_currency", "NOK")
     setup_completed = get_setting_value(db, "setup_completed", False)
@@ -40,6 +41,7 @@ async def get_settings(db: Session = Depends(get_db)):
         ai_provider=ai_provider,
         claude_api_key=claude_key,
         openai_api_key=openai_key,
+        gemini_api_key=gemini_key,
         ollama_endpoint=ollama_endpoint,
         default_currency=default_currency,
         setup_completed=setup_completed
@@ -57,6 +59,9 @@ async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db)
 
     if settings.openai_api_key is not None:
         set_setting_value(db, "openai_api_key", settings.openai_api_key)
+
+    if settings.gemini_api_key is not None:
+        set_setting_value(db, "gemini_api_key", settings.gemini_api_key)
 
     if settings.ollama_endpoint is not None:
         set_setting_value(db, "ollama_endpoint", settings.ollama_endpoint)
@@ -82,6 +87,10 @@ async def test_ai_connection(request: TestAIRequest):
             if not request.api_key:
                 return TestAIResponse(success=False, message="API key required for OpenAI")
             provider = OpenAIProvider(request.api_key)
+        elif request.provider == "gemini":
+            if not request.api_key:
+                return TestAIResponse(success=False, message="API key required for Gemini")
+            provider = GeminiProvider(request.api_key)
         elif request.provider == "ollama":
             endpoint = request.endpoint or "http://ollama:11434"
             provider = OllamaProvider(endpoint)

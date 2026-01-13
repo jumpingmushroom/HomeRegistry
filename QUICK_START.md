@@ -22,7 +22,7 @@ cd homeregistry
 
 ## Step 3: Choose Your AI Provider
 
-You have 3 options:
+You have 4 options:
 
 ### Option A: Anthropic Claude (Recommended)
 1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
@@ -40,7 +40,15 @@ You have 3 options:
    OPENAI_API_KEY=sk-your-key-here
    ```
 
-### Option C: Ollama (Free, Local, No API Key!)
+### Option C: Google Gemini
+1. Get an API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Edit `.env`:
+   ```bash
+   AI_PROVIDER=gemini
+   GEMINI_API_KEY=your-gemini-key-here
+   ```
+
+### Option D: Ollama (Free, Local, No API Key!)
 1. Uncomment the Ollama service in `docker-compose.yml`
 2. No `.env` changes needed
 

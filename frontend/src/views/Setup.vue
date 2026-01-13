@@ -11,6 +11,7 @@
         <select v-model="provider" class="select">
           <option value="claude">Anthropic Claude</option>
           <option value="openai">OpenAI GPT-4</option>
+          <option value="gemini">Google Gemini</option>
           <option value="ollama">Ollama (Local)</option>
         </select>
       </div>
@@ -38,6 +39,19 @@
         />
         <small style="color: var(--text-secondary);">
           Get your API key from <a href="https://platform.openai.com" target="_blank">platform.openai.com</a>
+        </small>
+      </div>
+
+      <div class="form-group" v-if="provider === 'gemini'">
+        <label class="label">Gemini API Key</label>
+        <input
+          type="password"
+          v-model="apiKey"
+          class="input"
+          placeholder="AI..."
+        />
+        <small style="color: var(--text-secondary);">
+          Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
         </small>
       </div>
 
@@ -115,6 +129,7 @@ export default {
           ai_provider: provider.value,
           claude_api_key: provider.value === 'claude' ? apiKey.value : null,
           openai_api_key: provider.value === 'openai' ? apiKey.value : null,
+          gemini_api_key: provider.value === 'gemini' ? apiKey.value : null,
           ollama_endpoint: provider.value === 'ollama' ? endpoint.value : null,
           setup_completed: true
         })

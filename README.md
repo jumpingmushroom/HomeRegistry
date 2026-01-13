@@ -8,7 +8,7 @@ A self-hosted home inventory management system that uses AI to analyze photos of
 ## ✨ Features
 
 - **📸 AI-Powered Photo Analysis**: Upload photos and let AI extract item details automatically
-- **🤖 Multi-AI Provider Support**: Choose between Anthropic Claude, OpenAI GPT-4, or local Ollama
+- **🤖 Multi-AI Provider Support**: Choose between Anthropic Claude, OpenAI GPT-4, Google Gemini, or local Ollama
 - **📱 Mobile-First PWA**: Works seamlessly on phones with camera integration
 - **🏘️ Hierarchical Organization**: Organize items by location (Home → Floor → Room → Storage)
 - **📦 Category Management**: Flexible category system with hierarchical structure
@@ -25,7 +25,7 @@ A self-hosted home inventory management system that uses AI to analyze photos of
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- (Optional) API key for Claude or OpenAI, OR a running Ollama instance
+- (Optional) API key for Claude, OpenAI, or Gemini, OR a running Ollama instance
 
 ### Installation
 
@@ -49,6 +49,10 @@ CLAUDE_API_KEY=sk-ant-your-api-key
 # OR for OpenAI
 AI_PROVIDER=openai
 OPENAI_API_KEY=sk-your-api-key
+
+# OR for Google Gemini
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
 
 # OR for local Ollama (no API key needed)
 AI_PROVIDER=ollama

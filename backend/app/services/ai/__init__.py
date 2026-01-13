@@ -2,5 +2,6 @@ from .base import AIProvider
 from .claude import ClaudeProvider
 from .openai import OpenAIProvider
 from .ollama import OllamaProvider
+from .gemini import GeminiProvider
 
-__all__ = ["AIProvider", "ClaudeProvider", "OpenAIProvider", "OllamaProvider"]
+__all__ = ["AIProvider", "ClaudeProvider", "OpenAIProvider", "OllamaProvider", "GeminiProvider"]

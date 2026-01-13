@@ -10,7 +10,7 @@ from ..models.image import Image as ImageModel
 from ..schemas.item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
 from ..schemas.image import ImageResponse, ImageAnalysisResponse, AIAnalysisResult
 from ..services.image_service import ImageService
-from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider
+from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider, GeminiProvider
 from ..utils.prompts import get_analysis_prompt
 from ..api.settings import get_setting_value
 
@@ -31,6 +31,11 @@ def get_ai_provider(db: Session):
         if not api_key:
             raise HTTPException(status_code=400, detail="OpenAI API key not configured")
         return OpenAIProvider(api_key)
+    elif provider_name == "gemini":
+        api_key = get_setting_value(db, "gemini_api_key")
+        if not api_key:
+            raise HTTPException(status_code=400, detail="Gemini API key not configured")
+        return GeminiProvider(api_key)
     elif provider_name == "ollama":
         endpoint = get_setting_value(db, "ollama_endpoint", "http://ollama:11434")
         return OllamaProvider(endpoint)

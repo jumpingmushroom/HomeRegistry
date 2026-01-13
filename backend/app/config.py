@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ai_provider: str = "claude"
     claude_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
     ollama_endpoint: str = "http://ollama:11434"
 
     # App configuration
