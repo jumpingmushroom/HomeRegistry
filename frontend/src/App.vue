@@ -3,6 +3,9 @@
     <nav class="nav" v-if="!isSetupRoute">
       <div class="nav-content">
         <div class="nav-title">🏠 HomeRegistry</div>
+        <button @click="toggleDarkMode" class="theme-toggle" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+          {{ isDarkMode ? '☀️' : '🌙' }}
+        </button>
       </div>
     </nav>
 
@@ -30,7 +33,7 @@
 </template>
 
 <script>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from './services/api'
 
@@ -39,10 +42,42 @@ export default {
   setup() {
     const router = useRouter()
     const route = useRoute()
+    const isDarkMode = ref(false)
 
     const isSetupRoute = computed(() => route.path === '/setup')
 
+    const initDarkMode = () => {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme === 'dark') {
+        isDarkMode.value = true
+        document.body.classList.add('dark-mode')
+      } else if (savedTheme === 'light') {
+        isDarkMode.value = false
+        document.body.classList.remove('dark-mode')
+      } else {
+        // Check system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        isDarkMode.value = prefersDark
+        if (prefersDark) {
+          document.body.classList.add('dark-mode')
+        }
+      }
+    }
+
+    const toggleDarkMode = () => {
+      isDarkMode.value = !isDarkMode.value
+      if (isDarkMode.value) {
+        document.body.classList.add('dark-mode')
+        localStorage.setItem('theme', 'dark')
+      } else {
+        document.body.classList.remove('dark-mode')
+        localStorage.setItem('theme', 'light')
+      }
+    }
+
     onMounted(async () => {
+      initDarkMode()
+
       try {
         const { data: settings } = await api.getSettings()
         if (!settings.setup_completed && route.path !== '/setup') {
@@ -54,7 +89,9 @@ export default {
     })
 
     return {
-      isSetupRoute
+      isSetupRoute,
+      isDarkMode,
+      toggleDarkMode
     }
   }
 }
