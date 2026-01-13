@@ -138,8 +138,15 @@ async def get_items(
     item_responses = []
     for item in items:
         images = [ImageResponse.model_validate(img) for img in item.images]
+        # Create dict excluding SQLAlchemy internal fields and relationships
+        item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
+        item_dict.pop('images', None)
+        item_dict.pop('documents', None)
+        item_dict.pop('category', None)
+        item_dict.pop('location', None)
+
         item_response = ItemResponse(
-            **item.__dict__,
+            **item_dict,
             images=images,
             documents=[],
             category_name=item.category.name if item.category else None,
@@ -163,8 +170,15 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_item)
 
+    # Create dict excluding SQLAlchemy internal fields and relationships
+    item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
+    item_dict.pop('images', None)
+    item_dict.pop('documents', None)
+    item_dict.pop('category', None)
+    item_dict.pop('location', None)
+
     return ItemResponse(
-        **db_item.__dict__,
+        **item_dict,
         images=[],
         documents=[],
         category_name=db_item.category.name if db_item.category else None,
@@ -181,8 +195,15 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
 
     images = [ImageResponse.model_validate(img) for img in item.images]
 
+    # Create dict excluding SQLAlchemy internal fields and relationships
+    item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
+    item_dict.pop('images', None)
+    item_dict.pop('documents', None)
+    item_dict.pop('category', None)
+    item_dict.pop('location', None)
+
     return ItemResponse(
-        **item.__dict__,
+        **item_dict,
         images=images,
         documents=[],
         category_name=item.category.name if item.category else None,
@@ -206,8 +227,15 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
 
     images = [ImageResponse.model_validate(img) for img in db_item.images]
 
+    # Create dict excluding SQLAlchemy internal fields and relationships
+    item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
+    item_dict.pop('images', None)
+    item_dict.pop('documents', None)
+    item_dict.pop('category', None)
+    item_dict.pop('location', None)
+
     return ItemResponse(
-        **db_item.__dict__,
+        **item_dict,
         images=images,
         documents=[],
         category_name=db_item.category.name if db_item.category else None,
