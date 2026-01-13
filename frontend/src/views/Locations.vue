@@ -60,9 +60,13 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import api from '../services/api'
+import LocationTreeItem from '../components/LocationTreeItem.vue'
 
 export default {
   name: 'Locations',
+  components: {
+    LocationTreeItem
+  },
   setup() {
     const locations = ref([])
     const loading = ref(true)
@@ -142,36 +146,6 @@ export default {
       addLocation,
       editLocation,
       deleteLocation
-    }
-  },
-  components: {
-    LocationTreeItem: {
-      props: ['location'],
-      emits: ['edit', 'delete'],
-      template: `
-        <div style="margin-bottom: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--divider-color);">
-            <div>
-              <strong>{{ location.name }}</strong>
-              <span style="margin-left: 8px; font-size: 12px; color: var(--text-secondary);">
-                ({{ location.location_type }}) • {{ location.item_count }} items
-              </span>
-            </div>
-            <button @click="$emit('delete', location.id)" style="color: var(--error-color); background: none; border: none; cursor: pointer;">
-              Delete
-            </button>
-          </div>
-          <div v-if="location.children && location.children.length > 0" style="margin-left: 24px;">
-            <LocationTreeItem
-              v-for="child in location.children"
-              :key="child.id"
-              :location="child"
-              @edit="$emit('edit', $event)"
-              @delete="$emit('delete', $event)"
-            />
-          </div>
-        </div>
-      `
     }
   }
 }
