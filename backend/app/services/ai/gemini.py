@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import google.generativeai as genai
 from PIL import Image
 from .base import AIProvider
@@ -7,12 +7,12 @@ from .base import AIProvider
 class GeminiProvider(AIProvider):
     """Google Gemini AI Provider"""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, model_name: Optional[str] = None):
         self.api_key = api_key
         genai.configure(api_key=api_key)
-        # Using gemini-1.5-flash for speed and cost-effectiveness
-        # Can be changed to gemini-1.5-pro for better quality
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use provided model or default to gemini-pro-vision
+        self.model_name = model_name or 'gemini-pro-vision'
+        self.model = genai.GenerativeModel(self.model_name)
 
     async def analyze_images(self, image_paths: List[str], prompt: str) -> Dict[str, Any]:
         """Analyze images using Gemini Vision"""
@@ -43,8 +43,7 @@ class GeminiProvider(AIProvider):
         """Test Gemini API connection"""
         try:
             # Make a simple text-only API call to test connection
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content("Hi")
+            response = self.model.generate_content("Hi")
 
             # If we got a response, connection is successful
             if response and response.text:
@@ -60,3 +59,34 @@ class GeminiProvider(AIProvider):
                 return False, "API quota exceeded"
             else:
                 return False, f"Connection failed: {error_msg}"
+
+    @staticmethod
+    def list_available_models(api_key: str) -> List[Dict[str, Any]]:
+        """List all available Gemini models that support vision/multimodal"""
+        try:
+            genai.configure(api_key=api_key)
+            models = []
+
+            for model in genai.list_models():
+                # Check if model supports generateContent (needed for our use case)
+                if 'generateContent' in model.supported_generation_methods:
+                    # Check if model supports vision (has vision in name or supports image input)
+                    supports_vision = (
+                        'vision' in model.name.lower() or
+                        'pro' in model.name.lower() or
+                        'flash' in model.name.lower()
+                    )
+
+                    models.append({
+                        'name': model.name,
+                        'display_name': model.display_name,
+                        'description': model.description if hasattr(model, 'description') else None,
+                        'supports_vision': supports_vision
+                    })
+
+            # Filter to only models that support vision
+            vision_models = [m for m in models if m['supports_vision']]
+            return vision_models if vision_models else models  # Fallback to all if none marked as vision
+
+        except Exception as e:
+            raise Exception(f"Failed to list models: {str(e)}")

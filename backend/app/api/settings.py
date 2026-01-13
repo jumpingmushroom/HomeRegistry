@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from ..database import get_db
 from ..models.setting import Setting
-from ..schemas.setting import SettingUpdate, SettingResponse, TestAIRequest, TestAIResponse
+from ..schemas.setting import SettingUpdate, SettingResponse, TestAIRequest, TestAIResponse, GeminiModel
 from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider, GeminiProvider
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -33,6 +33,7 @@ async def get_settings(db: Session = Depends(get_db)):
     claude_key = get_setting_value(db, "claude_api_key")
     openai_key = get_setting_value(db, "openai_api_key")
     gemini_key = get_setting_value(db, "gemini_api_key")
+    gemini_model = get_setting_value(db, "gemini_model")
     ollama_endpoint = get_setting_value(db, "ollama_endpoint", "http://ollama:11434")
     default_currency = get_setting_value(db, "default_currency", "NOK")
     setup_completed = get_setting_value(db, "setup_completed", False)
@@ -42,6 +43,7 @@ async def get_settings(db: Session = Depends(get_db)):
         claude_api_key=claude_key,
         openai_api_key=openai_key,
         gemini_api_key=gemini_key,
+        gemini_model=gemini_model,
         ollama_endpoint=ollama_endpoint,
         default_currency=default_currency,
         setup_completed=setup_completed
@@ -62,6 +64,9 @@ async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db)
 
     if settings.gemini_api_key is not None:
         set_setting_value(db, "gemini_api_key", settings.gemini_api_key)
+
+    if settings.gemini_model is not None:
+        set_setting_value(db, "gemini_model", settings.gemini_model)
 
     if settings.ollama_endpoint is not None:
         set_setting_value(db, "ollama_endpoint", settings.ollama_endpoint)
@@ -90,7 +95,24 @@ async def test_ai_connection(request: TestAIRequest):
         elif request.provider == "gemini":
             if not request.api_key:
                 return TestAIResponse(success=False, message="API key required for Gemini")
-            provider = GeminiProvider(request.api_key)
+            # First, list available models
+            try:
+                models_data = GeminiProvider.list_available_models(request.api_key)
+                available_models = [GeminiModel(**model) for model in models_data]
+
+                # If we successfully listed models, test with the first available model
+                if available_models:
+                    provider = GeminiProvider(request.api_key, available_models[0].name)
+                    success, message = await provider.test_connection()
+                    return TestAIResponse(
+                        success=success,
+                        message=message,
+                        available_models=available_models
+                    )
+                else:
+                    return TestAIResponse(success=False, message="No compatible models found")
+            except Exception as e:
+                return TestAIResponse(success=False, message=f"Failed to list models: {str(e)}")
         elif request.provider == "ollama":
             endpoint = request.endpoint or "http://ollama:11434"
             provider = OllamaProvider(endpoint)

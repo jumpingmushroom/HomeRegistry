@@ -59,6 +59,18 @@
         {{ testResult.message }}
       </div>
 
+      <div class="form-group" v-if="settings.ai_provider === 'gemini' && availableModels.length > 0">
+        <label class="label">Gemini Model</label>
+        <select v-model="settings.gemini_model" class="select">
+          <option v-for="model in availableModels" :key="model.name" :value="model.name">
+            {{ model.display_name }}
+          </option>
+        </select>
+        <small style="color: var(--text-secondary);" v-if="settings.gemini_model">
+          {{ getModelDescription(settings.gemini_model) }}
+        </small>
+      </div>
+
       <div style="display: flex; gap: 12px; margin-top: 16px;">
         <button @click="testConnection" class="btn btn-outline" :disabled="testing">
           {{ testing ? 'Testing...' : 'Test Connection' }}
@@ -105,12 +117,14 @@ export default {
       claude_api_key: '',
       openai_api_key: '',
       gemini_api_key: '',
+      gemini_model: '',
       ollama_endpoint: 'http://ollama:11434',
       default_currency: 'NOK'
     })
     const testing = ref(false)
     const saving = ref(false)
     const testResult = ref(null)
+    const availableModels = ref([])
 
     const loadSettings = async () => {
       try {
@@ -120,8 +134,14 @@ export default {
           claude_api_key: data.claude_api_key || '',
           openai_api_key: data.openai_api_key || '',
           gemini_api_key: data.gemini_api_key || '',
+          gemini_model: data.gemini_model || '',
           ollama_endpoint: data.ollama_endpoint || 'http://ollama:11434',
           default_currency: data.default_currency || 'NOK'
+        }
+
+        // If Gemini is selected and we have an API key, load available models
+        if (data.ai_provider === 'gemini' && data.gemini_api_key) {
+          await loadGeminiModels()
         }
       } catch (error) {
         console.error('Failed to load settings:', error)
@@ -141,6 +161,15 @@ export default {
           settings.value.ollama_endpoint
         )
         testResult.value = data
+
+        // If Gemini and we got models, populate the list
+        if (settings.value.ai_provider === 'gemini' && data.available_models) {
+          availableModels.value = data.available_models
+          // Auto-select the first model if none selected
+          if (!settings.value.gemini_model && data.available_models.length > 0) {
+            settings.value.gemini_model = data.available_models[0].name
+          }
+        }
       } catch (error) {
         testResult.value = {
           success: false,
@@ -149,6 +178,28 @@ export default {
       } finally {
         testing.value = false
       }
+    }
+
+    const loadGeminiModels = async () => {
+      if (!settings.value.gemini_api_key) return
+
+      try {
+        const { data } = await api.testAI(
+          'gemini',
+          settings.value.gemini_api_key,
+          null
+        )
+        if (data.available_models) {
+          availableModels.value = data.available_models
+        }
+      } catch (error) {
+        console.error('Failed to load Gemini models:', error)
+      }
+    }
+
+    const getModelDescription = (modelName) => {
+      const model = availableModels.value.find(m => m.name === modelName)
+      return model?.description || 'Multimodal AI model with vision support'
     }
 
     const saveSettings = async () => {
@@ -171,8 +222,10 @@ export default {
       testing,
       saving,
       testResult,
+      availableModels,
       testConnection,
-      saveSettings
+      saveSettings,
+      getModelDescription
     }
   }
 }

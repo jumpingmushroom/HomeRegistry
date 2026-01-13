@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any, Optional
+from typing import Any, Optional, List
 from datetime import datetime
 
 
@@ -8,6 +8,7 @@ class SettingUpdate(BaseModel):
     claude_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
+    gemini_model: Optional[str] = None
     ollama_endpoint: Optional[str] = None
     default_currency: Optional[str] = None
     setup_completed: Optional[bool] = None
@@ -18,6 +19,7 @@ class SettingResponse(BaseModel):
     claude_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
+    gemini_model: Optional[str] = None
     ollama_endpoint: str
     default_currency: str
     setup_completed: bool = False
@@ -29,6 +31,14 @@ class TestAIRequest(BaseModel):
     endpoint: Optional[str] = None
 
 
+class GeminiModel(BaseModel):
+    name: str
+    display_name: str
+    description: Optional[str] = None
+    supports_vision: bool
+
+
 class TestAIResponse(BaseModel):
     success: bool
     message: str
+    available_models: Optional[List[GeminiModel]] = None

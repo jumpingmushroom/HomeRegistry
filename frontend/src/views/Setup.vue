@@ -72,11 +72,23 @@
         {{ testResult.message }}
       </div>
 
+      <div class="form-group" v-if="provider === 'gemini' && availableModels.length > 0">
+        <label class="label">Select Gemini Model</label>
+        <select v-model="selectedModel" class="select">
+          <option v-for="model in availableModels" :key="model.name" :value="model.name">
+            {{ model.display_name }}
+          </option>
+        </select>
+        <small style="color: var(--text-secondary);" v-if="selectedModel">
+          {{ getModelDescription(selectedModel) }}
+        </small>
+      </div>
+
       <div style="display: flex; gap: 12px; margin-top: 24px;">
         <button @click="testConnection" class="btn btn-outline" :disabled="testing">
           {{ testing ? 'Testing...' : 'Test Connection' }}
         </button>
-        <button @click="saveSettings" class="btn btn-primary" :disabled="!testResult || !testResult.success || saving">
+        <button @click="saveSettings" class="btn btn-primary" :disabled="!testResult || !testResult.success || saving || (provider === 'gemini' && !selectedModel)">
           {{ saving ? 'Saving...' : 'Complete Setup' }}
         </button>
       </div>
@@ -99,10 +111,14 @@ export default {
     const testing = ref(false)
     const saving = ref(false)
     const testResult = ref(null)
+    const availableModels = ref([])
+    const selectedModel = ref('')
 
     const testConnection = async () => {
       testing.value = true
       testResult.value = null
+      availableModels.value = []
+      selectedModel.value = ''
 
       try {
         const { data } = await api.testAI(
@@ -111,6 +127,15 @@ export default {
           endpoint.value
         )
         testResult.value = data
+
+        // If Gemini and we got models, populate the list
+        if (provider.value === 'gemini' && data.available_models) {
+          availableModels.value = data.available_models
+          // Auto-select the first model
+          if (data.available_models.length > 0) {
+            selectedModel.value = data.available_models[0].name
+          }
+        }
       } catch (error) {
         testResult.value = {
           success: false,
@@ -125,21 +150,28 @@ export default {
       saving.value = true
 
       try {
-        await api.updateSettings({
+        const settings = {
           ai_provider: provider.value,
           claude_api_key: provider.value === 'claude' ? apiKey.value : null,
           openai_api_key: provider.value === 'openai' ? apiKey.value : null,
           gemini_api_key: provider.value === 'gemini' ? apiKey.value : null,
+          gemini_model: provider.value === 'gemini' ? selectedModel.value : null,
           ollama_endpoint: provider.value === 'ollama' ? endpoint.value : null,
           setup_completed: true
-        })
+        }
 
+        await api.updateSettings(settings)
         router.push('/')
       } catch (error) {
         alert('Failed to save settings: ' + error.message)
       } finally {
         saving.value = false
       }
+    }
+
+    const getModelDescription = (modelName) => {
+      const model = availableModels.value.find(m => m.name === modelName)
+      return model?.description || 'Multimodal AI model with vision support'
     }
 
     return {
@@ -149,8 +181,11 @@ export default {
       testing,
       saving,
       testResult,
+      availableModels,
+      selectedModel,
       testConnection,
-      saveSettings
+      saveSettings,
+      getModelDescription
     }
   }
 }

@@ -35,7 +35,10 @@ def get_ai_provider(db: Session):
         api_key = get_setting_value(db, "gemini_api_key")
         if not api_key:
             raise HTTPException(status_code=400, detail="Gemini API key not configured")
-        return GeminiProvider(api_key)
+        model_name = get_setting_value(db, "gemini_model")
+        if not model_name:
+            raise HTTPException(status_code=400, detail="Gemini model not configured. Please select a model in Settings.")
+        return GeminiProvider(api_key, model_name)
     elif provider_name == "ollama":
         endpoint = get_setting_value(db, "ollama_endpoint", "http://ollama:11434")
         return OllamaProvider(endpoint)
