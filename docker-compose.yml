@@ -17,14 +17,14 @@ services:
       - MAX_DOCUMENT_SIZE_MB=${MAX_DOCUMENT_SIZE_MB:-50}
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
-      - CORS_ORIGINS=http://localhost,http://localhost:8080,http://localhost:80
+      - CORS_ORIGINS_STR=http://localhost,http://localhost:8080,http://localhost:8180
     volumes:
       - homeregistry-data:/data
     networks:
       - homeregistry-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,7 +33,7 @@ services:
     build: ./frontend
     container_name: homeregistry-frontend
     ports:
-      - "8080:80"
+      - "8180:80"
     depends_on:
       - backend
     networks:
