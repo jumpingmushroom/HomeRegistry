@@ -122,6 +122,49 @@
             <label class="label">Notes</label>
             <textarea v-model="editForm.notes" class="textarea" rows="3"></textarea>
           </div>
+
+          <!-- Documents Section in Edit Mode -->
+          <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 16px;">📎 Documents</h3>
+
+            <div v-if="item.documents && item.documents.length > 0" style="margin-bottom: 16px;">
+              <div v-for="doc in item.documents" :key="doc.id"
+                   style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: var(--surface-hover); border-radius: var(--border-radius);">
+                <div style="flex: 1;">
+                  <a :href="getDocumentUrl(doc.id)" target="_blank" style="font-weight: 500; color: var(--primary-color);">
+                    {{ doc.original_filename }}
+                  </a>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                    {{ formatDocumentType(doc.document_type) }} • {{ formatFileSize(doc.file_size) }}
+                  </div>
+                </div>
+                <button @click="deleteDocument(doc.id)" class="btn btn-outline" style="padding: 6px 12px; font-size: 12px; background: var(--error-color); color: white; border: none;">
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="label">Add Document</label>
+              <div style="display: flex; gap: 12px; align-items: end;">
+                <div style="flex: 1;">
+                  <select v-model="newDocumentType" class="select">
+                    <option value="receipt">Receipt</option>
+                    <option value="manual">Manual</option>
+                    <option value="warranty">Warranty</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <label class="btn btn-primary" style="margin: 0;">
+                  Choose File
+                  <input type="file" @change="handleDocumentSelect" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" />
+                </label>
+              </div>
+              <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                Supported: PDF, JPG, PNG (max 50MB)
+              </small>
+            </div>
+          </div>
         </div>
 
         <!-- View Mode -->
@@ -199,6 +242,30 @@
           <strong>Notes:</strong>
           <p style="margin-top: 8px; color: var(--text-secondary); white-space: pre-wrap;">{{ item.notes }}</p>
         </div>
+
+        <!-- Documents Section in View Mode -->
+        <div v-if="item.documents && item.documents.length > 0" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+          <h3 style="margin-bottom: 16px;">📎 Attached Documents</h3>
+          <div class="grid grid-2">
+            <a v-for="doc in item.documents" :key="doc.id"
+               :href="getDocumentUrl(doc.id)"
+               target="_blank"
+               style="display: flex; align-items: center; padding: 12px; background: var(--surface-hover); border-radius: var(--border-radius); text-decoration: none; color: var(--text-primary);">
+              <div style="font-size: 32px; margin-right: 12px;">
+                {{ getDocumentIcon(doc.document_type, doc.mime_type) }}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 500; color: var(--primary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {{ doc.original_filename }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                  {{ formatDocumentType(doc.document_type) }} • {{ formatFileSize(doc.file_size) }}
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+
         </div>
         <!-- End View Mode -->
       </div>
@@ -227,6 +294,8 @@ export default {
     const currentImageId = ref(null)
     const categories = ref([])
     const locations = ref([])
+    const newDocumentType = ref('receipt')
+    const uploadingDocument = ref(false)
     const editForm = ref({
       name: '',
       description: '',
@@ -384,6 +453,85 @@ export default {
       return api.getImageUrl(imageId, thumbnail)
     }
 
+    const getDocumentUrl = (documentId) => {
+      return api.getDocumentUrl(documentId)
+    }
+
+    const formatDocumentType = (type) => {
+      const types = {
+        receipt: 'Receipt',
+        manual: 'Manual',
+        warranty: 'Warranty',
+        other: 'Other'
+      }
+      return types[type] || type
+    }
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
+    const getDocumentIcon = (type, mimeType) => {
+      if (mimeType && mimeType.startsWith('image/')) return '🖼️'
+      if (mimeType && mimeType === 'application/pdf') return '📄'
+
+      const icons = {
+        receipt: '🧾',
+        manual: '📖',
+        warranty: '🛡️',
+        other: '📎'
+      }
+      return icons[type] || '📎'
+    }
+
+    const handleDocumentSelect = async (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Validate file size (50MB max)
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) {
+        alert('File is too large. Maximum size is 50MB.')
+        return
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Only PDF, JPG, and PNG files are allowed.')
+        return
+      }
+
+      uploadingDocument.value = true
+      try {
+        await api.uploadDocument(route.params.id, file, newDocumentType.value)
+        await loadItem()
+        event.target.value = '' // Reset file input
+        alert('Document uploaded successfully!')
+      } catch (error) {
+        alert('Failed to upload document: ' + error.message)
+      } finally {
+        uploadingDocument.value = false
+      }
+    }
+
+    const deleteDocument = async (documentId) => {
+      if (!confirm('Are you sure you want to delete this document?')) {
+        return
+      }
+
+      try {
+        await api.deleteDocument(documentId)
+        await loadItem()
+      } catch (error) {
+        alert('Failed to delete document: ' + error.message)
+      }
+    }
+
     onMounted(() => {
       loadItem()
       loadCategories()
@@ -401,12 +549,20 @@ export default {
       locations,
       flatCategories,
       flatLocations,
+      newDocumentType,
+      uploadingDocument,
       deleteItem,
       saveItem,
       cancelEdit,
       formatCurrency,
       formatDate,
-      getImageUrl
+      getImageUrl,
+      getDocumentUrl,
+      formatDocumentType,
+      formatFileSize,
+      getDocumentIcon,
+      handleDocumentSelect,
+      deleteDocument
     }
   }
 }

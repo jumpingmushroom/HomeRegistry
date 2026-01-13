@@ -9,6 +9,7 @@ from ..models.item import Item
 from ..models.image import Image as ImageModel
 from ..schemas.item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
 from ..schemas.image import ImageResponse, ImageAnalysisResponse, AIAnalysisResult
+from ..schemas.document import DocumentResponse
 from ..services.image_service import ImageService
 from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider, GeminiProvider
 from ..utils.prompts import get_analysis_prompt
@@ -138,6 +139,7 @@ async def get_items(
     item_responses = []
     for item in items:
         images = [ImageResponse.model_validate(img) for img in item.images]
+        documents = [DocumentResponse.model_validate(doc) for doc in item.documents]
         # Create dict excluding SQLAlchemy internal fields and relationships
         item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
         item_dict.pop('images', None)
@@ -148,7 +150,7 @@ async def get_items(
         item_response = ItemResponse(
             **item_dict,
             images=images,
-            documents=[],
+            documents=documents,
             category_name=item.category.name if item.category else None,
             location_name=item.location.name if item.location else None
         )
@@ -170,6 +172,7 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_item)
 
+    documents = [DocumentResponse.model_validate(doc) for doc in db_item.documents]
     # Create dict excluding SQLAlchemy internal fields and relationships
     item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
     item_dict.pop('images', None)
@@ -180,7 +183,7 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     return ItemResponse(
         **item_dict,
         images=[],
-        documents=[],
+        documents=documents,
         category_name=db_item.category.name if db_item.category else None,
         location_name=db_item.location.name if db_item.location else None
     )
@@ -194,6 +197,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Item not found")
 
     images = [ImageResponse.model_validate(img) for img in item.images]
+    documents = [DocumentResponse.model_validate(doc) for doc in item.documents]
 
     # Create dict excluding SQLAlchemy internal fields and relationships
     item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
@@ -205,7 +209,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
     return ItemResponse(
         **item_dict,
         images=images,
-        documents=[],
+        documents=documents,
         category_name=item.category.name if item.category else None,
         location_name=item.location.name if item.location else None
     )
@@ -226,6 +230,7 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
     db.refresh(db_item)
 
     images = [ImageResponse.model_validate(img) for img in db_item.images]
+    documents = [DocumentResponse.model_validate(doc) for doc in db_item.documents]
 
     # Create dict excluding SQLAlchemy internal fields and relationships
     item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
@@ -237,7 +242,7 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
     return ItemResponse(
         **item_dict,
         images=images,
-        documents=[],
+        documents=documents,
         category_name=db_item.category.name if db_item.category else None,
         location_name=db_item.location.name if db_item.location else None
     )
