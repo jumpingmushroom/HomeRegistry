@@ -190,5 +190,10 @@ export default {
 
   deleteInsurancePolicy(id) {
     return api.delete(`/insurance-policies/${id}`)
+  },
+
+  // Reports
+  getInsuranceReportUrl(propertyId) {
+    return `${API_BASE}/reports/insurance/${propertyId}`
   }
 }

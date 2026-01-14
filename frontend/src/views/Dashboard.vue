@@ -1,6 +1,11 @@
 <template>
   <div class="container">
-    <h1 style="margin-bottom: 24px;">Dashboard</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <h1 style="margin: 0;">Dashboard</h1>
+      <button @click="generateReport" class="btn btn-primary" :disabled="generatingReport">
+        {{ generatingReport ? 'Generating...' : '📄 Insurance Report' }}
+      </button>
+    </div>
 
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
@@ -76,6 +81,7 @@ export default {
   name: 'Dashboard',
   setup() {
     const loading = ref(true)
+    const generatingReport = ref(false)
     const selectedPropertyId = inject('selectedPropertyId')
     const stats = ref({
       total_items: 0,
@@ -109,6 +115,21 @@ export default {
       return new Date(dateStr).toLocaleDateString('nb-NO')
     }
 
+    const generateReport = () => {
+      if (!selectedPropertyId.value) {
+        alert('Please select a property first')
+        return
+      }
+      generatingReport.value = true
+      // Open the report URL in a new tab to trigger download
+      const reportUrl = api.getInsuranceReportUrl(selectedPropertyId.value)
+      window.open(reportUrl, '_blank')
+      // Reset after a short delay (download should start immediately)
+      setTimeout(() => {
+        generatingReport.value = false
+      }, 2000)
+    }
+
     // Reload stats when selected property changes
     watch(selectedPropertyId, () => {
       if (selectedPropertyId.value) {
@@ -124,9 +145,11 @@ export default {
 
     return {
       loading,
+      generatingReport,
       stats,
       formatCurrency,
-      formatDate
+      formatDate,
+      generateReport
     }
   }
 }
