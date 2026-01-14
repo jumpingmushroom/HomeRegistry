@@ -129,7 +129,7 @@ def run_migrations():
 
 
 def seed_default_categories():
-    """Seed default categories if the categories table is empty"""
+    """Seed default categories, adding any missing ones"""
     from sqlalchemy import text
     import uuid
 
@@ -153,21 +153,25 @@ def seed_default_categories():
     ]
 
     with engine.connect() as conn:
-        # Check if categories table exists and is empty
         try:
-            result = conn.execute(text("SELECT COUNT(*) FROM categories"))
-            count = result.scalar()
+            # Get existing category names
+            result = conn.execute(text("SELECT name FROM categories"))
+            existing_names = {row[0] for row in result}
 
-            if count == 0:
-                print("Seeding default categories...")
-                for category_name in default_categories:
+            # Add missing default categories
+            added_count = 0
+            for category_name in default_categories:
+                if category_name not in existing_names:
                     category_id = str(uuid.uuid4())
                     conn.execute(
                         text("INSERT INTO categories (id, name) VALUES (:id, :name)"),
                         {"id": category_id, "name": category_name}
                     )
+                    added_count += 1
+
+            if added_count > 0:
                 conn.commit()
-                print(f"Created {len(default_categories)} default categories")
+                print(f"Added {added_count} default categories")
         except Exception as e:
             # Table might not exist yet, skip
             print(f"Skipping category seeding: {e}")
