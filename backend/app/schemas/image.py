@@ -28,6 +28,7 @@ class ImageAnalysisRequest(BaseModel):
 class AIAnalysisResult(BaseModel):
     item_name: str
     category: str
+    category_is_new: bool = False
     description: str
     manufacturer: Optional[str] = None
     model_number: Optional[str] = None

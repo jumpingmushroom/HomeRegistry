@@ -128,7 +128,53 @@ def run_migrations():
             conn.commit()
 
 
+def seed_default_categories():
+    """Seed default categories if the categories table is empty"""
+    from sqlalchemy import text
+    import uuid
+
+    default_categories = [
+        "Electronics",
+        "Furniture",
+        "Appliances",
+        "Kitchen & Dining",
+        "Clothing & Accessories",
+        "Tools & Equipment",
+        "Outdoor & Garden",
+        "Sports & Recreation",
+        "Books & Media",
+        "Art & Decor",
+        "Jewelry & Watches",
+        "Musical Instruments",
+        "Toys & Games",
+        "Office Supplies",
+        "Health & Personal Care",
+        "Automotive",
+    ]
+
+    with engine.connect() as conn:
+        # Check if categories table exists and is empty
+        try:
+            result = conn.execute(text("SELECT COUNT(*) FROM categories"))
+            count = result.scalar()
+
+            if count == 0:
+                print("Seeding default categories...")
+                for category_name in default_categories:
+                    category_id = str(uuid.uuid4())
+                    conn.execute(
+                        text("INSERT INTO categories (id, name) VALUES (:id, :name)"),
+                        {"id": category_id, "name": category_name}
+                    )
+                conn.commit()
+                print(f"Created {len(default_categories)} default categories")
+        except Exception as e:
+            # Table might not exist yet, skip
+            print(f"Skipping category seeding: {e}")
+
+
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
     run_migrations()
+    seed_default_categories()

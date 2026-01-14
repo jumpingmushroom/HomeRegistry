@@ -59,12 +59,18 @@
       <div class="grid grid-2">
         <div class="form-group">
           <label class="label">Category</label>
-          <select v-model="form.category_id" class="select">
+          <select v-model="form.category_id" class="select" @change="onCategoryChange">
             <option value="">Select category</option>
+            <option v-if="newCategoryName" value="__new__" class="new-category-option">
+              ✨ {{ newCategoryName }} (New)
+            </option>
             <option v-for="cat in flatCategories" :key="cat.id" :value="cat.id">
               {{ cat.indent }}{{ cat.name }}
             </option>
           </select>
+          <small v-if="form.category_id === '__new__'" style="color: var(--primary-color); display: block; margin-top: 4px;">
+            A new category "{{ newCategoryName }}" will be created
+          </small>
         </div>
 
         <div class="form-group">
@@ -185,6 +191,7 @@ export default {
     const flatCategories = ref([])
     const flatLocations = ref([])
     const tagsInput = ref('')
+    const newCategoryName = ref('')
 
     const form = ref({
       name: '',
@@ -283,11 +290,21 @@ export default {
             tagsInput.value = data.analysis.tags.join(', ')
           }
 
-          // Find matching category
+          // Handle category - check if AI suggests a new one
           const categoryName = data.analysis.category
-          const matchingCategory = findCategoryByName(categoryName)
-          if (matchingCategory) {
-            form.value.category_id = matchingCategory.id
+          const categoryIsNew = data.analysis.category_is_new
+
+          if (categoryIsNew) {
+            // AI suggests a new category
+            newCategoryName.value = categoryName
+            form.value.category_id = '__new__'
+          } else {
+            // Find matching existing category
+            const matchingCategory = findCategoryByName(categoryName)
+            if (matchingCategory) {
+              form.value.category_id = matchingCategory.id
+            }
+            newCategoryName.value = ''
           }
 
           // Find matching location
@@ -322,6 +339,13 @@ export default {
         return null
       }
       return search(categories.value)
+    }
+
+    const onCategoryChange = () => {
+      // If user selects an existing category, clear the new category suggestion
+      if (form.value.category_id !== '__new__') {
+        // Keep newCategoryName so user can switch back if they want
+      }
     }
 
     const findLocationByName = (name) => {
@@ -360,11 +384,23 @@ export default {
       saving.value = true
 
       try {
+        let categoryId = form.value.category_id
+
+        // Create new category if AI suggested one and user accepted
+        if (categoryId === '__new__' && newCategoryName.value) {
+          const { data: newCategory } = await api.createCategory({ name: newCategoryName.value })
+          categoryId = newCategory.id
+
+          // Add to local categories list
+          categories.value.push(newCategory)
+          flatCategories.value = flattenTree(categories.value)
+        }
+
         // Create item with selected property
         const { data: item } = await api.createItem({
           ...form.value,
           property_id: selectedPropertyId.value,
-          category_id: form.value.category_id || null,
+          category_id: categoryId === '__new__' ? null : (categoryId || null),
           location_id: form.value.location_id || null
         })
 
@@ -422,12 +458,14 @@ export default {
       flatCategories,
       flatLocations,
       tagsInput,
+      newCategoryName,
       openCamera,
       handleFileSelect,
       removeFile,
       analyzeWithAI,
       updateTags,
-      saveItem
+      saveItem,
+      onCategoryChange
     }
   }
 }

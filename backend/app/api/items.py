@@ -7,6 +7,7 @@ import os
 from ..database import get_db
 from ..models.item import Item
 from ..models.image import Image as ImageModel
+from ..models.category import Category
 from ..schemas.item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
 from ..schemas.image import ImageResponse, ImageAnalysisResponse, AIAnalysisResult
 from ..schemas.document import DocumentResponse
@@ -16,6 +17,74 @@ from ..utils.prompts import get_analysis_prompt
 from ..api.settings import get_setting_value
 
 router = APIRouter(prefix="/api/items", tags=["items"])
+
+
+def normalize_category_name(name: str) -> str:
+    """Normalize category name for comparison"""
+    return name.lower().strip().replace("&", "and").replace("-", " ")
+
+
+def get_word_stem(word: str) -> str:
+    """Simple stemming - remove common suffixes"""
+    if len(word) > 4:
+        if word.endswith('ics'):
+            return word[:-1]  # electronics -> electronic
+        if word.endswith('s') and not word.endswith('ss'):
+            return word[:-1]  # tools -> tool
+        if word.endswith('ing'):
+            return word[:-3]  # dining -> din
+        if word.endswith('ment'):
+            return word[:-4]  # equipment -> equip
+    return word
+
+
+def find_similar_category(suggested: str, existing_categories: List[Category]) -> Optional[Category]:
+    """
+    Find a similar existing category for the AI suggestion.
+    Returns the matching category if found, None if truly new.
+    """
+    suggested_normalized = normalize_category_name(suggested)
+    suggested_words = set(suggested_normalized.split())
+    suggested_stems = {get_word_stem(w) for w in suggested_words}
+
+    best_match = None
+    best_score = 0
+
+    for category in existing_categories:
+        cat_normalized = normalize_category_name(category.name)
+        cat_words = set(cat_normalized.split())
+        cat_stems = {get_word_stem(w) for w in cat_words}
+
+        # Exact match (case-insensitive)
+        if suggested_normalized == cat_normalized:
+            return category
+
+        # Check if one contains the other
+        if suggested_normalized in cat_normalized or cat_normalized in suggested_normalized:
+            return category
+
+        # Check stem overlap (handles electronics/electronic, tools/tool, etc.)
+        common_stems = suggested_stems & cat_stems
+        if common_stems:
+            # Score based on proportion of matching stems
+            score = len(common_stems) / max(len(suggested_stems), len(cat_stems))
+            if score > best_score:
+                best_score = score
+                best_match = category
+
+        # Also check word overlap
+        common_words = suggested_words & cat_words
+        if common_words:
+            score = len(common_words) / max(len(suggested_words), len(cat_words))
+            if score > best_score:
+                best_score = score
+                best_match = category
+
+    # Return match only if score is significant
+    if best_score >= 0.4:  # 40% overlap threshold
+        return best_match
+
+    return None
 
 
 def get_ai_provider(db: Session):
@@ -56,6 +125,10 @@ async def analyze_images(
     if not files:
         raise HTTPException(status_code=400, detail="No images provided")
 
+    # Fetch existing categories for the prompt
+    existing_categories = db.query(Category).all()
+    category_names = [cat.name for cat in existing_categories]
+
     temp_files = []
     try:
         # Save images to temp files
@@ -66,11 +139,27 @@ async def analyze_images(
             temp_file.close()
             temp_files.append(temp_file.name)
 
-        # Get AI provider and analyze
+        # Get AI provider and analyze with categories in prompt
         provider = get_ai_provider(db)
-        prompt = get_analysis_prompt()
+        prompt = get_analysis_prompt(category_names)
 
         analysis_result = await provider.analyze_images(temp_files, prompt)
+
+        # Run similarity check on the suggested category
+        suggested_category = analysis_result.get("category", "")
+        category_is_new = analysis_result.get("category_is_new", False)
+
+        # Even if AI says it's not new, verify against our list
+        # Also check if AI said it's new but we have a similar one
+        similar_category = find_similar_category(suggested_category, existing_categories)
+
+        if similar_category:
+            # Found a match - use existing category name
+            analysis_result["category"] = similar_category.name
+            analysis_result["category_is_new"] = False
+        else:
+            # Truly new category
+            analysis_result["category_is_new"] = True
 
         # Convert to response format
         ai_result = AIAnalysisResult(**analysis_result)
