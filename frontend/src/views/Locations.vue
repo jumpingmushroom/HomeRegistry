@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject, watch } from 'vue'
 import api from '../services/api'
 import LocationTreeItem from '../components/LocationTreeItem.vue'
 
@@ -68,6 +68,7 @@ export default {
     LocationTreeItem
   },
   setup() {
+    const selectedPropertyId = inject('selectedPropertyId')
     const locations = ref([])
     const loading = ref(true)
     const showAddModal = ref(false)
@@ -93,8 +94,10 @@ export default {
     })
 
     const loadLocations = async () => {
+      if (!selectedPropertyId.value) return
+      loading.value = true
       try {
-        const { data } = await api.getLocations()
+        const { data } = await api.getLocations(selectedPropertyId.value)
         locations.value = data
       } catch (error) {
         console.error('Failed to load locations:', error)
@@ -107,6 +110,7 @@ export default {
       try {
         await api.createLocation({
           ...newLocation.value,
+          property_id: selectedPropertyId.value,
           parent_id: newLocation.value.parent_id || null
         })
         showAddModal.value = false
@@ -135,7 +139,16 @@ export default {
       }
     }
 
-    onMounted(loadLocations)
+    // Reload when property changes
+    watch(selectedPropertyId, () => {
+      loadLocations()
+    })
+
+    onMounted(() => {
+      if (selectedPropertyId.value) {
+        loadLocations()
+      }
+    })
 
     return {
       locations,

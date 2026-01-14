@@ -4,6 +4,8 @@ from .item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
 from .image import ImageResponse, ImageAnalysisRequest, ImageAnalysisResponse
 from .document import DocumentResponse, DocumentUpload
 from .setting import SettingUpdate, SettingResponse
+from .property import PropertyCreate, PropertyUpdate, PropertyResponse, PropertyListResponse
+from .insurance_policy import InsurancePolicyCreate, InsurancePolicyUpdate, InsurancePolicyResponse
 
 __all__ = [
     "LocationCreate", "LocationUpdate", "LocationResponse", "LocationTree",
@@ -12,4 +14,6 @@ __all__ = [
     "ImageResponse", "ImageAnalysisRequest", "ImageAnalysisResponse",
     "DocumentResponse", "DocumentUpload",
     "SettingUpdate", "SettingResponse",
+    "PropertyCreate", "PropertyUpdate", "PropertyResponse", "PropertyListResponse",
+    "InsurancePolicyCreate", "InsurancePolicyUpdate", "InsurancePolicyResponse",
 ]

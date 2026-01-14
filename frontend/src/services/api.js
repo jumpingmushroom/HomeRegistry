@@ -33,8 +33,9 @@ export default {
   },
 
   // Locations
-  getLocations() {
-    return api.get('/locations')
+  getLocations(propertyId = null) {
+    const params = propertyId ? { property_id: propertyId } : {}
+    return api.get('/locations', { params })
   },
 
   createLocation(location) {
@@ -143,7 +144,51 @@ export default {
   },
 
   // Dashboard
-  getDashboardStats() {
-    return api.get('/dashboard/stats')
+  getDashboardStats(propertyId = null) {
+    const params = propertyId ? { property_id: propertyId } : {}
+    return api.get('/dashboard/stats', { params })
+  },
+
+  // Properties
+  getProperties() {
+    return api.get('/properties')
+  },
+
+  getProperty(id) {
+    return api.get(`/properties/${id}`)
+  },
+
+  createProperty(property) {
+    return api.post('/properties', property)
+  },
+
+  updateProperty(id, property) {
+    return api.put(`/properties/${id}`, property)
+  },
+
+  deleteProperty(id) {
+    return api.delete(`/properties/${id}`)
+  },
+
+  // Insurance Policies
+  getInsurancePolicies(propertyId = null) {
+    const params = propertyId ? { property_id: propertyId } : {}
+    return api.get('/insurance-policies', { params })
+  },
+
+  getInsurancePolicy(id) {
+    return api.get(`/insurance-policies/${id}`)
+  },
+
+  createInsurancePolicy(policy) {
+    return api.post('/insurance-policies', policy)
+  },
+
+  updateInsurancePolicy(id, policy) {
+    return api.put(`/insurance-policies/${id}`, policy)
+  },
+
+  deleteInsurancePolicy(id) {
+    return api.delete(`/insurance-policies/${id}`)
   }
 }

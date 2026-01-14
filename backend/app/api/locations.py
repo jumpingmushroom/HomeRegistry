@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import get_db
 from ..models.location import Location
 from ..schemas.location import LocationCreate, LocationUpdate, LocationResponse, LocationTree
@@ -19,20 +19,28 @@ def build_location_tree(locations: List[Location], parent_id: str = None) -> Lis
                 id=location.id,
                 name=location.name,
                 description=location.description,
+                property_id=location.property_id,
                 location_type=location.location_type,
                 parent_id=location.parent_id,
                 created_at=location.created_at,
                 updated_at=location.updated_at,
                 item_count=item_count,
+                property_name=location.property.name if location.property else None,
                 children=children
             ))
     return tree
 
 
 @router.get("", response_model=List[LocationTree])
-async def get_locations(db: Session = Depends(get_db)):
-    """Get all locations as a tree"""
-    locations = db.query(Location).all()
+async def get_locations(
+    property_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get all locations as a tree, optionally filtered by property"""
+    query = db.query(Location)
+    if property_id:
+        query = query.filter(Location.property_id == property_id)
+    locations = query.all()
     return build_location_tree(locations)
 
 
@@ -54,11 +62,13 @@ async def create_location(location: LocationCreate, db: Session = Depends(get_db
         id=db_location.id,
         name=db_location.name,
         description=db_location.description,
+        property_id=db_location.property_id,
         location_type=db_location.location_type,
         parent_id=db_location.parent_id,
         created_at=db_location.created_at,
         updated_at=db_location.updated_at,
-        item_count=0
+        item_count=0,
+        property_name=db_location.property.name if db_location.property else None
     )
 
 
@@ -80,11 +90,13 @@ async def update_location(location_id: str, location: LocationUpdate, db: Sessio
         id=db_location.id,
         name=db_location.name,
         description=db_location.description,
+        property_id=db_location.property_id,
         location_type=db_location.location_type,
         parent_id=db_location.parent_id,
         created_at=db_location.created_at,
         updated_at=db_location.updated_at,
-        item_count=len(db_location.items)
+        item_count=len(db_location.items),
+        property_name=db_location.property.name if db_location.property else None
     )
 
 

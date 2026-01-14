@@ -8,6 +8,7 @@ from ..models.item import ItemCondition
 class ItemBase(BaseModel):
     name: str
     description: Optional[str] = None
+    property_id: Optional[str] = None
     category_id: Optional[str] = None
     location_id: Optional[str] = None
     serial_number: Optional[str] = None
@@ -17,9 +18,12 @@ class ItemBase(BaseModel):
     quantity: int = 1
     purchase_date: Optional[date] = None
     purchase_price: Optional[Decimal] = None
+    purchase_location: Optional[str] = None
     current_value: Optional[Decimal] = None
     currency: str = "NOK"
     warranty_expiration: Optional[date] = None
+    barcode: Optional[str] = None
+    tags: Optional[List[str]] = None
     notes: Optional[str] = None
 
 
@@ -30,6 +34,7 @@ class ItemCreate(ItemBase):
 class ItemUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    property_id: Optional[str] = None
     category_id: Optional[str] = None
     location_id: Optional[str] = None
     serial_number: Optional[str] = None
@@ -39,9 +44,12 @@ class ItemUpdate(BaseModel):
     quantity: Optional[int] = None
     purchase_date: Optional[date] = None
     purchase_price: Optional[Decimal] = None
+    purchase_location: Optional[str] = None
     current_value: Optional[Decimal] = None
     currency: Optional[str] = None
     warranty_expiration: Optional[date] = None
+    barcode: Optional[str] = None
+    tags: Optional[List[str]] = None
     notes: Optional[str] = None
     ai_metadata: Optional[dict] = None
 
@@ -53,6 +61,7 @@ class ItemResponse(ItemBase):
     updated_at: Optional[datetime] = None
     images: List[Any] = []  # Will be ImageResponse
     documents: List[Any] = []  # Will be DocumentResponse
+    property_name: Optional[str] = None
     category_name: Optional[str] = None
     location_name: Optional[str] = None
 

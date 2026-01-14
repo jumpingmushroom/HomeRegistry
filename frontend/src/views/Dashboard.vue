@@ -69,13 +69,14 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch } from 'vue'
 import api from '../services/api'
 
 export default {
   name: 'Dashboard',
   setup() {
     const loading = ref(true)
+    const selectedPropertyId = inject('selectedPropertyId')
     const stats = ref({
       total_items: 0,
       total_value: 0,
@@ -86,8 +87,9 @@ export default {
     })
 
     const loadStats = async () => {
+      loading.value = true
       try {
-        const { data } = await api.getDashboardStats()
+        const { data } = await api.getDashboardStats(selectedPropertyId.value)
         stats.value = data
       } catch (error) {
         console.error('Failed to load stats:', error)
@@ -107,7 +109,18 @@ export default {
       return new Date(dateStr).toLocaleDateString('nb-NO')
     }
 
-    onMounted(loadStats)
+    // Reload stats when selected property changes
+    watch(selectedPropertyId, () => {
+      if (selectedPropertyId.value) {
+        loadStats()
+      }
+    })
+
+    onMounted(() => {
+      if (selectedPropertyId.value) {
+        loadStats()
+      }
+    })
 
     return {
       loading,

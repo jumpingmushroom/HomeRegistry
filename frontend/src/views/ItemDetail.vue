@@ -75,6 +75,13 @@
             </div>
 
             <div class="form-group">
+              <label class="label">Barcode/UPC</label>
+              <input v-model="editForm.barcode" class="input" />
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
               <label class="label">Condition</label>
               <select v-model="editForm.condition" class="select">
                 <option value="">Select condition</option>
@@ -84,6 +91,11 @@
                 <option value="fair">Fair</option>
                 <option value="poor">Poor</option>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label class="label">Purchase Location</label>
+              <input v-model="editForm.purchase_location" class="input" />
             </div>
           </div>
 
@@ -121,6 +133,14 @@
           <div class="form-group">
             <label class="label">Notes</label>
             <textarea v-model="editForm.notes" class="textarea" rows="3"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="label">Tags</label>
+            <input v-model="editTagsInput" @input="updateEditTags" class="input" placeholder="Enter tags separated by commas" />
+            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+              Separate multiple tags with commas (e.g., electronics, warranty, fragile)
+            </small>
           </div>
 
           <!-- Documents Section in Edit Mode -->
@@ -221,6 +241,9 @@
           <div v-if="item.serial_number">
             <strong>Serial:</strong> {{ item.serial_number }}
           </div>
+          <div v-if="item.barcode">
+            <strong>Barcode/UPC:</strong> {{ item.barcode }}
+          </div>
         </div>
 
         <div class="grid grid-2" style="margin-top: 16px;">
@@ -233,6 +256,9 @@
           <div v-if="item.purchase_date">
             <strong>Purchase Date:</strong> {{ formatDate(item.purchase_date) }}
           </div>
+          <div v-if="item.purchase_location">
+            <strong>Purchase Location:</strong> {{ item.purchase_location }}
+          </div>
           <div v-if="item.warranty_expiration">
             <strong>Warranty Expires:</strong> {{ formatDate(item.warranty_expiration) }}
           </div>
@@ -241,6 +267,16 @@
         <div v-if="item.notes" style="margin-top: 16px;">
           <strong>Notes:</strong>
           <p style="margin-top: 8px; color: var(--text-secondary); white-space: pre-wrap;">{{ item.notes }}</p>
+        </div>
+
+        <div v-if="item.tags && item.tags.length > 0" style="margin-top: 16px;">
+          <strong>Tags:</strong>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+            <span v-for="tag in item.tags" :key="tag"
+                  style="padding: 4px 12px; background: var(--primary-color); color: white; border-radius: 16px; font-size: 14px;">
+              {{ tag }}
+            </span>
+          </div>
         </div>
 
         <!-- Documents Section in View Mode -->
@@ -278,7 +314,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 
@@ -287,6 +323,7 @@ export default {
   setup() {
     const route = useRoute()
     const router = useRouter()
+    const selectedPropertyId = inject('selectedPropertyId')
     const item = ref(null)
     const loading = ref(true)
     const editMode = ref(false)
@@ -304,14 +341,18 @@ export default {
       manufacturer: '',
       model_number: '',
       serial_number: '',
+      barcode: '',
       condition: '',
       quantity: 1,
       purchase_price: null,
+      purchase_location: '',
       current_value: null,
       purchase_date: '',
       warranty_expiration: '',
+      tags: [],
       notes: ''
     })
+    const editTagsInput = ref('')
 
     const flatCategories = computed(() => {
       const flatten = (cats, indent = '') => {
@@ -358,14 +399,19 @@ export default {
           manufacturer: data.manufacturer || '',
           model_number: data.model_number || '',
           serial_number: data.serial_number || '',
+          barcode: data.barcode || '',
           condition: data.condition || '',
           quantity: data.quantity || 1,
           purchase_price: data.purchase_price || null,
+          purchase_location: data.purchase_location || '',
           current_value: data.current_value || null,
           purchase_date: data.purchase_date || '',
           warranty_expiration: data.warranty_expiration || '',
+          tags: data.tags || [],
           notes: data.notes || ''
         }
+        // Initialize tags input
+        editTagsInput.value = (data.tags || []).join(', ')
       } catch (error) {
         console.error('Failed to load item:', error)
       } finally {
@@ -382,9 +428,9 @@ export default {
       }
     }
 
-    const loadLocations = async () => {
+    const loadLocations = async (propertyId = null) => {
       try {
-        const { data } = await api.getLocations()
+        const { data } = await api.getLocations(propertyId || selectedPropertyId.value)
         locations.value = data
       } catch (error) {
         console.error('Failed to load locations:', error)
@@ -415,14 +461,18 @@ export default {
         manufacturer: item.value.manufacturer || '',
         model_number: item.value.model_number || '',
         serial_number: item.value.serial_number || '',
+        barcode: item.value.barcode || '',
         condition: item.value.condition || '',
         quantity: item.value.quantity || 1,
         purchase_price: item.value.purchase_price || null,
+        purchase_location: item.value.purchase_location || '',
         current_value: item.value.current_value || null,
         purchase_date: item.value.purchase_date || '',
         warranty_expiration: item.value.warranty_expiration || '',
+        tags: item.value.tags || [],
         notes: item.value.notes || ''
       }
+      editTagsInput.value = (item.value.tags || []).join(', ')
     }
 
     const deleteItem = async () => {
@@ -532,10 +582,23 @@ export default {
       }
     }
 
-    onMounted(() => {
-      loadItem()
+    const updateEditTags = () => {
+      // Convert comma-separated string to array
+      editForm.value.tags = editTagsInput.value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0)
+    }
+
+    onMounted(async () => {
+      await loadItem()
       loadCategories()
-      loadLocations()
+      // Load locations filtered by item's property
+      if (item.value && item.value.property_id) {
+        loadLocations(item.value.property_id)
+      } else {
+        loadLocations()
+      }
     })
 
     return {
@@ -545,6 +608,7 @@ export default {
       saving,
       currentImageId,
       editForm,
+      editTagsInput,
       categories,
       locations,
       flatCategories,
@@ -562,7 +626,8 @@ export default {
       formatFileSize,
       getDocumentIcon,
       handleDocumentSelect,
-      deleteDocument
+      deleteDocument,
+      updateEditTags
     }
   }
 }

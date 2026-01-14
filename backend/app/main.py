@@ -6,6 +6,7 @@ from .database import init_db
 from .config import settings, cors_origins
 from .api import settings as settings_api
 from .api import locations, categories, items, images, documents, dashboard, init
+from .api import properties, insurance_policies
 
 
 @asynccontextmanager
@@ -41,6 +42,8 @@ app.include_router(images.router)
 app.include_router(documents.router)
 app.include_router(dashboard.router)
 app.include_router(init.router)
+app.include_router(properties.router)
+app.include_router(insurance_policies.router)
 
 
 @app.get("/api/health")

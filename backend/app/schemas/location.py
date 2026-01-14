@@ -7,6 +7,7 @@ from ..models.location import LocationType
 class LocationBase(BaseModel):
     name: str
     description: Optional[str] = None
+    property_id: Optional[str] = None
     location_type: LocationType
     parent_id: Optional[str] = None
 
@@ -18,6 +19,7 @@ class LocationCreate(LocationBase):
 class LocationUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    property_id: Optional[str] = None
     location_type: Optional[LocationType] = None
     parent_id: Optional[str] = None
 
@@ -27,6 +29,7 @@ class LocationResponse(LocationBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     item_count: int = 0
+    property_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -34,6 +37,7 @@ class LocationResponse(LocationBase):
 
 class LocationTree(LocationResponse):
     children: List["LocationTree"] = []
+    property_name: Optional[str] = None
 
     class Config:
         from_attributes = True

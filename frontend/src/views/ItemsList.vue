@@ -86,7 +86,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch } from 'vue'
 import api from '../services/api'
 
 export default {
@@ -105,16 +105,19 @@ export default {
     const locations = ref([])
     const flatCategories = ref([])
     const flatLocations = ref([])
+    const selectedPropertyId = inject('selectedPropertyId')
 
     let searchTimeout = null
 
     const loadItems = async () => {
+      if (!selectedPropertyId.value) return
       loading.value = true
       try {
         const { data } = await api.getItems({
           skip: (currentPage.value - 1) * pageSize.value,
           limit: pageSize.value,
           search: searchQuery.value || undefined,
+          property_id: selectedPropertyId.value,
           category_id: filterCategory.value || undefined,
           location_id: filterLocation.value || undefined,
           condition: filterCondition.value || undefined
@@ -125,6 +128,22 @@ export default {
         console.error('Failed to load items:', error)
       } finally {
         loading.value = false
+      }
+    }
+
+    const loadFilters = async () => {
+      if (!selectedPropertyId.value) return
+      try {
+        const [catRes, locRes] = await Promise.all([
+          api.getCategories(),
+          api.getLocations(selectedPropertyId.value)
+        ])
+        categories.value = catRes.data
+        locations.value = locRes.data
+        flatCategories.value = flattenTree(catRes.data)
+        flatLocations.value = flattenTree(locRes.data)
+      } catch (error) {
+        console.error('Failed to load categories/locations:', error)
       }
     }
 
@@ -172,20 +191,19 @@ export default {
       return result
     }
 
-    onMounted(async () => {
-      try {
-        const [catRes, locRes] = await Promise.all([
-          api.getCategories(),
-          api.getLocations()
-        ])
-        categories.value = catRes.data
-        locations.value = locRes.data
-        flatCategories.value = flattenTree(catRes.data)
-        flatLocations.value = flattenTree(locRes.data)
-      } catch (error) {
-        console.error('Failed to load categories/locations:', error)
-      }
+    // Reload when property changes
+    watch(selectedPropertyId, () => {
+      filterLocation.value = ''
+      currentPage.value = 1
+      loadFilters()
       loadItems()
+    })
+
+    onMounted(async () => {
+      if (selectedPropertyId.value) {
+        await loadFilters()
+        loadItems()
+      }
     })
 
     return {

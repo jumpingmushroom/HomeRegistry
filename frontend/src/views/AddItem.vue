@@ -97,6 +97,13 @@
         </div>
 
         <div class="form-group">
+          <label class="label">Barcode/UPC</label>
+          <input v-model="form.barcode" class="input" />
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
           <label class="label">Condition</label>
           <select v-model="form.condition" class="select">
             <option value="">Select condition</option>
@@ -106,6 +113,11 @@
             <option value="fair">Fair</option>
             <option value="poor">Poor</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Purchase Location</label>
+          <input v-model="form.purchase_location" class="input" />
         </div>
       </div>
 
@@ -138,6 +150,14 @@
         <textarea v-model="form.notes" class="textarea" rows="3"></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="label">Tags</label>
+        <input v-model="tagsInput" @input="updateTags" class="input" placeholder="Enter tags separated by commas" />
+        <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+          Separate multiple tags with commas (e.g., electronics, warranty, fragile)
+        </small>
+      </div>
+
       <button @click="saveItem" class="btn btn-primary" :disabled="saving || !form.name">
         {{ saving ? 'Saving...' : 'Save Item' }}
       </button>
@@ -146,7 +166,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 
@@ -154,6 +174,7 @@ export default {
   name: 'AddItem',
   setup() {
     const router = useRouter()
+    const selectedPropertyId = inject('selectedPropertyId')
     const selectedFiles = ref([])
     const analyzing = ref(false)
     const analysisResult = ref(null)
@@ -163,20 +184,25 @@ export default {
     const locations = ref([])
     const flatCategories = ref([])
     const flatLocations = ref([])
+    const tagsInput = ref('')
 
     const form = ref({
       name: '',
       description: '',
+      property_id: '',
       category_id: '',
       location_id: '',
       manufacturer: '',
       model_number: '',
       serial_number: '',
+      barcode: '',
       condition: '',
       purchase_price: null,
+      purchase_location: '',
       current_value: null,
       purchase_date: null,
       warranty_expiration: null,
+      tags: [],
       notes: '',
       ai_metadata: null
     })
@@ -220,6 +246,14 @@ export default {
       selectedFiles.value.splice(index, 1)
     }
 
+    const updateTags = () => {
+      // Convert comma-separated string to array
+      form.value.tags = tagsInput.value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0)
+    }
+
     const analyzeWithAI = async () => {
       analyzing.value = true
       analysisError.value = null
@@ -237,9 +271,17 @@ export default {
           form.value.manufacturer = data.analysis.manufacturer || ''
           form.value.model_number = data.analysis.model_number || ''
           form.value.serial_number = data.analysis.serial_number || ''
+          form.value.barcode = data.analysis.barcode || ''
           form.value.condition = data.analysis.condition || ''
+          form.value.purchase_location = data.analysis.purchase_location || ''
           form.value.current_value = data.analysis.estimated_value_nok || null
           form.value.ai_metadata = data.analysis
+
+          // Handle tags
+          if (data.analysis.tags && Array.isArray(data.analysis.tags)) {
+            form.value.tags = data.analysis.tags
+            tagsInput.value = data.analysis.tags.join(', ')
+          }
 
           // Find matching category
           const categoryName = data.analysis.category
@@ -318,9 +360,10 @@ export default {
       saving.value = true
 
       try {
-        // Create item
+        // Create item with selected property
         const { data: item } = await api.createItem({
           ...form.value,
+          property_id: selectedPropertyId.value,
           category_id: form.value.category_id || null,
           location_id: form.value.location_id || null
         })
@@ -338,16 +381,32 @@ export default {
       }
     }
 
+    const loadLocations = async () => {
+      if (!selectedPropertyId.value) return
+      try {
+        const { data } = await api.getLocations(selectedPropertyId.value)
+        locations.value = data
+        flatLocations.value = flattenTree(data)
+      } catch (error) {
+        console.error('Failed to load locations:', error)
+      }
+    }
+
+    // Reload locations when property changes
+    watch(selectedPropertyId, () => {
+      form.value.location_id = ''
+      loadLocations()
+    })
+
     onMounted(async () => {
       try {
-        const [catRes, locRes] = await Promise.all([
-          api.getCategories(),
-          api.getLocations()
-        ])
-        categories.value = catRes.data
-        locations.value = locRes.data
-        flatCategories.value = flattenTree(catRes.data)
-        flatLocations.value = flattenTree(locRes.data)
+        const { data: catData } = await api.getCategories()
+        categories.value = catData
+        flatCategories.value = flattenTree(catData)
+
+        if (selectedPropertyId.value) {
+          await loadLocations()
+        }
       } catch (error) {
         console.error('Failed to load categories/locations:', error)
       }
@@ -362,10 +421,12 @@ export default {
       form,
       flatCategories,
       flatLocations,
+      tagsInput,
       openCamera,
       handleFileSelect,
       removeFile,
       analyzeWithAI,
+      updateTags,
       saveItem
     }
   }

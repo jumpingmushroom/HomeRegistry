@@ -99,6 +99,7 @@ async def get_items(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
+    property_id: Optional[str] = None,
     category_id: Optional[str] = None,
     location_id: Optional[str] = None,
     condition: Optional[str] = None,
@@ -108,6 +109,9 @@ async def get_items(
     query = db.query(Item)
 
     # Apply filters
+    if property_id:
+        query = query.filter(Item.property_id == property_id)
+
     if search:
         search_filter = f"%{search}%"
         query = query.filter(
@@ -146,11 +150,13 @@ async def get_items(
         item_dict.pop('documents', None)
         item_dict.pop('category', None)
         item_dict.pop('location', None)
+        item_dict.pop('property', None)
 
         item_response = ItemResponse(
             **item_dict,
             images=images,
             documents=documents,
+            property_name=item.property.name if item.property else None,
             category_name=item.category.name if item.category else None,
             location_name=item.location.name if item.location else None
         )
@@ -179,11 +185,13 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     item_dict.pop('documents', None)
     item_dict.pop('category', None)
     item_dict.pop('location', None)
+    item_dict.pop('property', None)
 
     return ItemResponse(
         **item_dict,
         images=[],
         documents=documents,
+        property_name=db_item.property.name if db_item.property else None,
         category_name=db_item.category.name if db_item.category else None,
         location_name=db_item.location.name if db_item.location else None
     )
@@ -205,11 +213,13 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
     item_dict.pop('documents', None)
     item_dict.pop('category', None)
     item_dict.pop('location', None)
+    item_dict.pop('property', None)
 
     return ItemResponse(
         **item_dict,
         images=images,
         documents=documents,
+        property_name=item.property.name if item.property else None,
         category_name=item.category.name if item.category else None,
         location_name=item.location.name if item.location else None
     )
@@ -238,11 +248,13 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
     item_dict.pop('documents', None)
     item_dict.pop('category', None)
     item_dict.pop('location', None)
+    item_dict.pop('property', None)
 
     return ItemResponse(
         **item_dict,
         images=images,
         documents=documents,
+        property_name=db_item.property.name if db_item.property else None,
         category_name=db_item.category.name if db_item.category else None,
         location_name=db_item.location.name if db_item.location else None
     )
