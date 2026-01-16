@@ -8,14 +8,17 @@ from .api import settings as settings_api
 from .api import locations, categories, items, images, documents, dashboard, init
 from .api import properties, insurance_policies, reports, auth, public, backup
 from .services.backup_scheduler import backup_scheduler
+from .services.warranty_scheduler import warranty_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database and start backup scheduler on startup"""
+    """Initialize database and start schedulers on startup"""
     init_db()
     backup_scheduler.start()
+    warranty_scheduler.start()
     yield
+    warranty_scheduler.stop()
     backup_scheduler.stop()
 
 

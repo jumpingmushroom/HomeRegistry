@@ -195,6 +195,131 @@ This is an automated message from HomeRegistry.
 
         return self.send_email(recipient, subject, body)
 
+    def send_warranty_expiration_alert(
+        self,
+        items: list,
+        days_threshold: int,
+        to: Optional[str] = None
+    ) -> bool:
+        """
+        Send a warranty expiration digest email.
+
+        Args:
+            items: List of items with expiring warranties (dicts with item info)
+            days_threshold: The days threshold used for the alert
+            to: Recipient email (uses settings.email_to if not provided)
+
+        Returns:
+            True if sent successfully, False otherwise
+        """
+        recipient = to or settings.email_to
+
+        if not recipient:
+            logger.warning("No recipient configured for warranty alerts")
+            return False
+
+        if not items:
+            logger.info("No items with expiring warranties to alert about")
+            return False
+
+        item_count = len(items)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        subject = f"[HomeRegistry] Warranty Expiration Alert - {item_count} item{'s' if item_count != 1 else ''} expiring soon"
+
+        # Build plain text body
+        body_lines = [
+            "HomeRegistry Warranty Expiration Alert",
+            "",
+            f"Time: {timestamp}",
+            f"Alert threshold: {days_threshold} days",
+            f"Items with expiring warranties: {item_count}",
+            "",
+            "Items:",
+            "-" * 60,
+        ]
+
+        for item in items:
+            body_lines.append(f"  - {item['name']}")
+            body_lines.append(f"    Property: {item.get('property_name', 'N/A')}")
+            body_lines.append(f"    Warranty expires: {item['warranty_expiration']}")
+            body_lines.append(f"    Days remaining: {item['days_remaining']}")
+            body_lines.append("")
+
+        body_lines.extend([
+            "-" * 60,
+            "",
+            "Please review these items and take appropriate action before warranties expire.",
+            "",
+            "---",
+            "This is an automated message from HomeRegistry.",
+        ])
+
+        body = "\n".join(body_lines)
+
+        # Build HTML body
+        items_rows = ""
+        for item in items:
+            days = item['days_remaining']
+            urgency_class = "urgent" if days <= 7 else "warning" if days <= 14 else ""
+            items_rows += f"""
+                <tr class="{urgency_class}">
+                    <td>{item['name']}</td>
+                    <td>{item.get('property_name', 'N/A')}</td>
+                    <td>{item['warranty_expiration']}</td>
+                    <td>{days} day{'s' if days != 1 else ''}</td>
+                </tr>
+            """
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+        .alert {{ background-color: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 5px; }}
+        .alert h2 {{ color: #856404; margin-top: 0; }}
+        .summary {{ background-color: #f8f9fa; padding: 15px; border-radius: 3px; margin: 15px 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+        th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background-color: #f8f9fa; font-weight: bold; }}
+        tr.urgent {{ background-color: #f8d7da; }}
+        tr.warning {{ background-color: #fff3cd; }}
+        .footer {{ color: #6c757d; font-size: 12px; margin-top: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="alert">
+        <h2>Warranty Expiration Alert</h2>
+        <p>The following items have warranties expiring within {days_threshold} days.</p>
+        <div class="summary">
+            <strong>Time:</strong> {timestamp}<br>
+            <strong>Items expiring:</strong> {item_count}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Property</th>
+                    <th>Warranty Expires</th>
+                    <th>Days Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                {items_rows}
+            </tbody>
+        </table>
+        <p>Please review these items and take appropriate action before warranties expire.</p>
+    </div>
+    <div class="footer">
+        This is an automated message from HomeRegistry.
+    </div>
+</body>
+</html>
+"""
+
+        return self.send_email(recipient, subject, body, html_body)
+
 
 # Singleton instance
 email_service = EmailService()

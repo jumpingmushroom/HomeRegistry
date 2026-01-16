@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     email_to: str = ""
     email_use_tls: bool = True
 
+    # Warranty alert settings
+    warranty_alerts_enabled: bool = True
+    warranty_alert_days_threshold: int = 30
+    warranty_alert_check_hour: int = 9  # Run at 9 AM
+
     class Config:
         env_file = ".env"
         case_sensitive = False
