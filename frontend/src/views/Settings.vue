@@ -685,10 +685,11 @@ export default {
     const loadProperties = async () => {
       loadingProperties.value = true
       try {
-        const { data } = await api.getProperties()
-        properties.value = data
+        const response = await api.getProperties()
+        properties.value = Array.isArray(response?.data) ? response.data : []
       } catch (error) {
         console.error('Failed to load properties:', error)
+        properties.value = []
       } finally {
         loadingProperties.value = false
       }
@@ -696,10 +697,11 @@ export default {
 
     const loadPoliciesForProperty = async (propertyId) => {
       try {
-        const { data } = await api.getInsurancePolicies(propertyId)
-        propertyPolicies.value[propertyId] = data
+        const response = await api.getInsurancePolicies(propertyId)
+        propertyPolicies.value[propertyId] = Array.isArray(response?.data) ? response.data : []
       } catch (error) {
         console.error('Failed to load policies:', error)
+        propertyPolicies.value[propertyId] = []
       }
     }
 
@@ -873,8 +875,16 @@ export default {
     const loadBackupStatus = async () => {
       loadingBackupStatus.value = true
       try {
-        const { data } = await api.getBackupStatus()
-        backupStatus.value = data
+        const response = await api.getBackupStatus()
+        backupStatus.value = response?.data || {
+          enabled: false,
+          interval_hours: 1,
+          last_backup: null,
+          last_error: null,
+          count: 0,
+          total_size: 0,
+          retention: {}
+        }
       } catch (error) {
         console.error('Failed to load backup status:', error)
       } finally {
@@ -885,10 +895,11 @@ export default {
     const loadBackups = async () => {
       loadingBackups.value = true
       try {
-        const { data } = await api.listBackups()
-        backups.value = data.backups
+        const response = await api.listBackups()
+        backups.value = Array.isArray(response?.data?.backups) ? response.data.backups : []
       } catch (error) {
         console.error('Failed to load backups:', error)
+        backups.value = []
       } finally {
         loadingBackups.value = false
       }
