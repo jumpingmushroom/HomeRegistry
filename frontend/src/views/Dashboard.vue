@@ -142,7 +142,7 @@
             @click="navigateToGap('no_purchase_info')"
           >
             <div class="gap-icon">🛒</div>
-            <div class="gap-label">No Price</div>
+            <div class="gap-label">No Purchase Info</div>
             <div class="gap-count">{{ stats.coverage_gaps?.no_purchase_info?.count || 0 }} items</div>
             <div class="gap-action" v-if="stats.coverage_gaps?.no_purchase_info?.count > 0">View →</div>
           </div>

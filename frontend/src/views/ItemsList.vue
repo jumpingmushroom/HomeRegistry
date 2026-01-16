@@ -254,7 +254,7 @@ export default {
       'no_documents': 'Items without receipts/documents',
       'no_images': 'Items without images',
       'high_value_undocumented': 'High-value items without documentation',
-      'no_purchase_info': 'Items missing purchase info'
+      'no_purchase_info': 'Items missing purchase price or date'
     }
 
     // Selection state
