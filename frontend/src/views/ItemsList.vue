@@ -2,6 +2,17 @@
   <div class="container">
     <h1 style="margin-bottom: 24px;">Items</h1>
 
+    <!-- Gap Filter Banner -->
+    <div v-if="gapFilter" class="gap-filter-banner">
+      <div class="gap-filter-info">
+        <span class="gap-filter-icon">🔍</span>
+        <span>Filtering: <strong>{{ getGapFilterLabel() }}</strong></span>
+      </div>
+      <button @click="clearGapFilter" class="btn btn-sm btn-outline">
+        Clear Filter ✕
+      </button>
+    </div>
+
     <div class="card">
       <input
         v-model="searchQuery"
@@ -213,17 +224,21 @@
 
 <script>
 import { ref, computed, onMounted, inject, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 
 export default {
   name: 'ItemsList',
   setup() {
+    const route = useRoute()
+    const router = useRouter()
     const items = ref([])
     const loading = ref(true)
     const searchQuery = ref('')
     const filterCategory = ref('')
     const filterLocation = ref('')
     const filterCondition = ref('')
+    const gapFilter = ref('')
     const currentPage = ref(1)
     const totalPages = ref(1)
     const pageSize = ref(30)
@@ -233,6 +248,14 @@ export default {
     const flatCategories = ref([])
     const flatLocations = ref([])
     const selectedPropertyId = inject('selectedPropertyId')
+
+    // Gap filter labels
+    const gapFilterLabels = {
+      'no_documents': 'Items without receipts/documents',
+      'no_images': 'Items without images',
+      'high_value_undocumented': 'High-value items without documentation',
+      'no_purchase_info': 'Items missing purchase info'
+    }
 
     // Selection state
     const selectedItems = ref([])
@@ -280,7 +303,8 @@ export default {
           property_id: selectedPropertyId.value,
           category_id: filterCategory.value || undefined,
           location_id: filterLocation.value || undefined,
-          condition: filterCondition.value || undefined
+          condition: filterCondition.value || undefined,
+          gap_filter: gapFilter.value || undefined
         })
         items.value = data.items
         totalPages.value = Math.ceil(data.total / pageSize.value)
@@ -291,6 +315,16 @@ export default {
       } finally {
         loading.value = false
       }
+    }
+
+    const clearGapFilter = () => {
+      gapFilter.value = ''
+      router.push({ path: '/items', query: {} })
+      loadItems()
+    }
+
+    const getGapFilterLabel = () => {
+      return gapFilterLabels[gapFilter.value] || gapFilter.value
     }
 
     const loadFilters = async () => {
@@ -435,7 +469,21 @@ export default {
       loadItems()
     })
 
+    // Watch for route query changes (gap_filter)
+    watch(() => route.query.gap_filter, (newFilter) => {
+      gapFilter.value = newFilter || ''
+      currentPage.value = 1
+      if (selectedPropertyId.value) {
+        loadItems()
+      }
+    })
+
     onMounted(async () => {
+      // Check for gap_filter in URL
+      if (route.query.gap_filter) {
+        gapFilter.value = route.query.gap_filter
+      }
+
       if (selectedPropertyId.value) {
         await loadFilters()
         loadItems()
@@ -449,6 +497,7 @@ export default {
       filterCategory,
       filterLocation,
       filterCondition,
+      gapFilter,
       currentPage,
       totalPages,
       flatCategories,
@@ -460,6 +509,8 @@ export default {
       nextPage,
       formatCurrency,
       getImageUrl,
+      clearGapFilter,
+      getGapFilterLabel,
       // Selection
       selectedItems,
       allSelected,
@@ -485,6 +536,39 @@ export default {
 </script>
 
 <style scoped>
+.gap-filter-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--warning-color);
+  color: #000;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.gap-filter-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gap-filter-icon {
+  font-size: 18px;
+}
+
+.gap-filter-banner .btn-outline {
+  background: transparent;
+  border-color: #000;
+  color: #000;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.gap-filter-banner .btn-outline:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 .batch-action-bar {
   display: flex;
   justify-content: space-between;

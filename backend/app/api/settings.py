@@ -39,6 +39,7 @@ async def get_settings(db: Session = Depends(get_db), current_user: User = Depen
     ollama_endpoint = get_setting_value(db, "ollama_endpoint", "http://ollama:11434")
     default_currency = get_setting_value(db, "default_currency", "NOK")
     setup_completed = get_setting_value(db, "setup_completed", False)
+    high_value_threshold = get_setting_value(db, "high_value_threshold", 5000)
 
     return SettingResponse(
         ai_provider=ai_provider,
@@ -48,7 +49,8 @@ async def get_settings(db: Session = Depends(get_db), current_user: User = Depen
         gemini_model=gemini_model,
         ollama_endpoint=ollama_endpoint,
         default_currency=default_currency,
-        setup_completed=setup_completed
+        setup_completed=setup_completed,
+        high_value_threshold=high_value_threshold
     )
 
 
@@ -78,6 +80,9 @@ async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db)
 
     if settings.setup_completed is not None:
         set_setting_value(db, "setup_completed", settings.setup_completed)
+
+    if settings.high_value_threshold is not None:
+        set_setting_value(db, "high_value_threshold", settings.high_value_threshold)
 
     return await get_settings(db, current_user)
 

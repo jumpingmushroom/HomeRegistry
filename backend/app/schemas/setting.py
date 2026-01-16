@@ -12,6 +12,7 @@ class SettingUpdate(BaseModel):
     ollama_endpoint: Optional[str] = None
     default_currency: Optional[str] = None
     setup_completed: Optional[bool] = None
+    high_value_threshold: Optional[int] = None
 
 
 class SettingResponse(BaseModel):
@@ -23,6 +24,7 @@ class SettingResponse(BaseModel):
     ollama_endpoint: str
     default_currency: str
     setup_completed: bool = False
+    high_value_threshold: int = 5000
 
 
 class TestAIRequest(BaseModel):

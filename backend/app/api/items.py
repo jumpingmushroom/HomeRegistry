@@ -7,9 +7,11 @@ import os
 from ..database import get_db
 from ..models.item import Item
 from ..models.image import Image as ImageModel
+from ..models.document import Document
 from ..models.category import Category
 from ..models.user import User
 from ..services.auth_service import get_current_user
+from .settings import get_setting_value
 from ..schemas.item import (
     ItemCreate, ItemUpdate, ItemResponse, ItemListResponse,
     BatchUpdateRequest, BatchDeleteRequest, BatchUpdateResponse, BatchDeleteResponse
@@ -198,6 +200,7 @@ async def get_items(
     category_id: Optional[str] = None,
     location_id: Optional[str] = None,
     condition: Optional[str] = None,
+    gap_filter: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -228,6 +231,29 @@ async def get_items(
 
     if condition:
         query = query.filter(Item.condition == condition)
+
+    # Apply gap filters for documentation issues
+    if gap_filter:
+        items_with_docs = db.query(Document.item_id).distinct()
+        items_with_images = db.query(ImageModel.item_id).distinct()
+
+        if gap_filter == "no_documents":
+            query = query.filter(~Item.id.in_(items_with_docs))
+        elif gap_filter == "no_images":
+            query = query.filter(~Item.id.in_(items_with_images))
+        elif gap_filter == "high_value_undocumented":
+            high_value_threshold = get_setting_value(db, "high_value_threshold", 5000)
+            query = query.filter(
+                Item.current_value >= high_value_threshold,
+                ~Item.id.in_(items_with_docs)
+            )
+        elif gap_filter == "no_purchase_info":
+            query = query.filter(
+                or_(
+                    Item.purchase_price.is_(None),
+                    Item.purchase_date.is_(None)
+                )
+            )
 
     # Get total count
     total = query.count()

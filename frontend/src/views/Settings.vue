@@ -107,6 +107,20 @@
             placeholder="NOK"
           />
         </div>
+
+        <div class="form-group">
+          <label class="label">High-Value Item Threshold</label>
+          <input
+            type="number"
+            v-model="settings.high_value_threshold"
+            class="input"
+            placeholder="5000"
+            min="0"
+          />
+          <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+            Items above this value without documentation will be flagged on the dashboard.
+          </small>
+        </div>
       </div>
 
       <div class="card" style="margin-top: 16px;">
@@ -528,7 +542,8 @@ export default {
       gemini_api_key: '',
       gemini_model: '',
       ollama_endpoint: 'http://ollama:11434',
-      default_currency: 'NOK'
+      default_currency: 'NOK',
+      high_value_threshold: 5000
     })
     const testing = ref(false)
     const saving = ref(false)
@@ -622,7 +637,8 @@ export default {
           gemini_api_key: data.gemini_api_key || '',
           gemini_model: data.gemini_model || '',
           ollama_endpoint: data.ollama_endpoint || 'http://ollama:11434',
-          default_currency: data.default_currency || 'NOK'
+          default_currency: data.default_currency || 'NOK',
+          high_value_threshold: data.high_value_threshold || 5000
         }
 
         // Load Gemini models in background - don't block UI
