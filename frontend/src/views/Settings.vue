@@ -1080,7 +1080,7 @@ export default {
   display: flex;
   gap: 4px;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 0;
 }
 
@@ -1098,12 +1098,12 @@ export default {
 }
 
 .tab-btn:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 .tab-content {
@@ -1139,22 +1139,25 @@ export default {
 }
 
 .status-enabled {
-  color: #22c55e;
+  color: var(--success-color);
 }
 
 .status-disabled {
-  color: #ef4444;
+  color: var(--error-color);
 }
 
 .info-box {
-  background: var(--bg-secondary);
+  background: var(--surface-hover);
   padding: 16px;
   border-radius: 8px;
   font-size: 14px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .info-box p {
   margin: 8px 0;
+  color: var(--text-primary);
 }
 
 .info-box p:first-child {
@@ -1175,7 +1178,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .backup-item:last-child {
@@ -1183,7 +1186,7 @@ export default {
 }
 
 .property-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   margin-bottom: 12px;
   overflow: hidden;
@@ -1195,16 +1198,18 @@ export default {
   align-items: center;
   padding: 12px 16px;
   cursor: pointer;
-  background: var(--bg-secondary);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .property-header:hover {
-  background: var(--bg-tertiary, var(--bg-secondary));
+  background: var(--surface);
 }
 
 .property-details {
   padding: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-color);
+  background: var(--background);
 }
 
 .policy-item {
@@ -1212,9 +1217,10 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: var(--bg-secondary);
+  background: var(--surface-hover);
   border-radius: 4px;
   margin-bottom: 8px;
+  color: var(--text-primary);
 }
 
 .policy-item:last-child {
