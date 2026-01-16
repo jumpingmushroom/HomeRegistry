@@ -595,7 +595,8 @@ export default {
     // Settings methods
     const loadSettings = async () => {
       try {
-        const { data } = await api.getSettings()
+        const response = await api.getSettings()
+        const data = response?.data || {}
         settings.value = {
           ai_provider: data.ai_provider || 'claude',
           claude_api_key: data.claude_api_key || '',
@@ -606,11 +607,13 @@ export default {
           default_currency: data.default_currency || 'NOK'
         }
 
+        // Load Gemini models in background - don't block UI
         if (data.ai_provider === 'gemini' && data.gemini_api_key) {
-          await loadGeminiModels()
+          loadGeminiModels().catch(() => {})
         }
       } catch (error) {
         console.error('Failed to load settings:', error)
+        // Keep default settings on error
       }
     }
 
@@ -619,16 +622,17 @@ export default {
       testResult.value = null
 
       try {
-        const { data } = await api.testAI(
+        const response = await api.testAI(
           settings.value.ai_provider,
           settings.value.ai_provider === 'claude' ? settings.value.claude_api_key :
           settings.value.ai_provider === 'openai' ? settings.value.openai_api_key :
           settings.value.ai_provider === 'gemini' ? settings.value.gemini_api_key : null,
           settings.value.ollama_endpoint
         )
+        const data = response?.data || { success: false, message: 'No response from server' }
         testResult.value = data
 
-        if (settings.value.ai_provider === 'gemini' && data.available_models) {
+        if (settings.value.ai_provider === 'gemini' && Array.isArray(data.available_models)) {
           availableModels.value = data.available_models
           if (!settings.value.gemini_model && data.available_models.length > 0) {
             settings.value.gemini_model = data.available_models[0].name
@@ -637,7 +641,7 @@ export default {
       } catch (error) {
         testResult.value = {
           success: false,
-          message: 'Connection test failed: ' + error.message
+          message: 'Connection test failed: ' + (error?.message || 'Unknown error')
         }
       } finally {
         testing.value = false
@@ -648,12 +652,15 @@ export default {
       if (!settings.value.gemini_api_key) return
 
       try {
-        const { data } = await api.testAI('gemini', settings.value.gemini_api_key, null)
-        if (data.available_models) {
+        const response = await api.testAI('gemini', settings.value.gemini_api_key, null)
+        const data = response?.data
+        if (data?.available_models && Array.isArray(data.available_models)) {
           availableModels.value = data.available_models
         }
       } catch (error) {
+        // Silently fail - models will be loaded when user clicks Test Connection
         console.error('Failed to load Gemini models:', error)
+        availableModels.value = []
       }
     }
 
