@@ -467,7 +467,20 @@ export default {
     const saveItem = async () => {
       saving.value = true
       try {
-        await api.updateItem(route.params.id, editForm.value)
+        // Clean form data: convert empty strings to null for optional fields
+        const cleanedData = { ...editForm.value }
+        const nullableFields = [
+          'description', 'category_id', 'location_id', 'manufacturer',
+          'model_number', 'serial_number', 'barcode', 'condition',
+          'purchase_price', 'purchase_location', 'current_value',
+          'purchase_date', 'warranty_expiration', 'notes'
+        ]
+        for (const field of nullableFields) {
+          if (cleanedData[field] === '' || cleanedData[field] === undefined) {
+            cleanedData[field] = null
+          }
+        }
+        await api.updateItem(route.params.id, cleanedData)
         await loadItem()
         editMode.value = false
       } catch (error) {
