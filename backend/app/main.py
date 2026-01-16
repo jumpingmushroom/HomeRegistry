@@ -6,14 +6,17 @@ from .database import init_db
 from .config import settings, cors_origins
 from .api import settings as settings_api
 from .api import locations, categories, items, images, documents, dashboard, init
-from .api import properties, insurance_policies, reports
+from .api import properties, insurance_policies, reports, auth, public, backup
+from .services.backup_scheduler import backup_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database on startup"""
+    """Initialize database and start backup scheduler on startup"""
     init_db()
+    backup_scheduler.start()
     yield
+    backup_scheduler.stop()
 
 
 # Create FastAPI app
@@ -34,6 +37,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(settings_api.router)
 app.include_router(locations.router)
 app.include_router(categories.router)
@@ -45,6 +49,8 @@ app.include_router(init.router)
 app.include_router(properties.router)
 app.include_router(insurance_policies.router)
 app.include_router(reports.router)
+app.include_router(public.router)
+app.include_router(backup.router)
 
 
 @app.get("/api/health")

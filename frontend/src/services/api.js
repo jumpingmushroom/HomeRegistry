@@ -9,7 +9,58 @@ const api = axios.create({
   }
 })
 
+// Request interceptor to add JWT token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear it
+      localStorage.removeItem('token')
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default {
+  // Auth
+  login(username, password) {
+    return api.post('/auth/login', { username, password })
+  },
+
+  register(username, password, email = null) {
+    return api.post('/auth/register', { username, password, email })
+  },
+
+  getMe() {
+    return api.get('/auth/me')
+  },
+
+  updateMe(data) {
+    return api.put('/auth/me', data)
+  },
+
+  getAuthStatus() {
+    return api.get('/auth/status')
+  },
+
   // Health
   health() {
     return api.get('/health')
@@ -86,6 +137,19 @@ export default {
 
   deleteItem(id) {
     return api.delete(`/items/${id}`)
+  },
+
+  batchUpdateItems(itemIds, updates) {
+    return api.post('/items/batch-update', {
+      item_ids: itemIds,
+      ...updates
+    })
+  },
+
+  batchDeleteItems(itemIds) {
+    return api.post('/items/batch-delete', {
+      item_ids: itemIds
+    })
   },
 
   analyzeImages(files) {
@@ -195,5 +259,45 @@ export default {
   // Reports
   getInsuranceReportUrl(propertyId) {
     return `${API_BASE}/reports/insurance/${propertyId}`
+  },
+
+  // Public (no auth required)
+  getPublicItem(id) {
+    return api.get(`/public/items/${id}`)
+  },
+
+  // QR Code
+  getItemQrCodeUrl(id, baseUrl = null) {
+    const params = baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : ''
+    return `${API_BASE}/items/${id}/qr${params}`
+  },
+
+  // Backups
+  getBackupStatus() {
+    return api.get('/backup/status')
+  },
+
+  listBackups() {
+    return api.get('/backup/list')
+  },
+
+  createBackup() {
+    return api.post('/backup/create')
+  },
+
+  downloadBackup(filename) {
+    return api.get(`/backup/download/${filename}`, {
+      responseType: 'blob'
+    })
+  },
+
+  downloadCurrentDatabase() {
+    return api.get('/backup/download-current', {
+      responseType: 'blob'
+    })
+  },
+
+  runBackupCleanup() {
+    return api.delete('/backup/cleanup')
   }
 }

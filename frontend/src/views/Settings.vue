@@ -2,159 +2,281 @@
   <div class="container">
     <h1 style="margin-bottom: 24px;">Settings</h1>
 
-    <div class="card">
-      <h3 style="margin-bottom: 16px;">AI Provider Configuration</h3>
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        :class="['tab-btn', { active: activeTab === tab.id }]"
+        @click="activeTab = tab.id"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
 
-      <div class="form-group">
-        <label class="label">AI Provider</label>
-        <select v-model="settings.ai_provider" class="select">
-          <option value="claude">Anthropic Claude</option>
-          <option value="openai">OpenAI GPT-4</option>
-          <option value="gemini">Google Gemini</option>
-          <option value="ollama">Ollama (Local)</option>
-        </select>
+    <!-- General Tab -->
+    <div v-show="activeTab === 'general'" class="tab-content">
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">AI Provider Configuration</h3>
+
+        <div class="form-group">
+          <label class="label">AI Provider</label>
+          <select v-model="settings.ai_provider" class="select">
+            <option value="claude">Anthropic Claude</option>
+            <option value="openai">OpenAI GPT-4</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="ollama">Ollama (Local)</option>
+          </select>
+        </div>
+
+        <div class="form-group" v-if="settings.ai_provider === 'claude'">
+          <label class="label">Claude API Key</label>
+          <input
+            type="password"
+            v-model="settings.claude_api_key"
+            class="input"
+            placeholder="sk-ant-..."
+          />
+        </div>
+
+        <div class="form-group" v-if="settings.ai_provider === 'openai'">
+          <label class="label">OpenAI API Key</label>
+          <input
+            type="password"
+            v-model="settings.openai_api_key"
+            class="input"
+            placeholder="sk-..."
+          />
+        </div>
+
+        <div class="form-group" v-if="settings.ai_provider === 'gemini'">
+          <label class="label">Gemini API Key</label>
+          <input
+            type="password"
+            v-model="settings.gemini_api_key"
+            class="input"
+            placeholder="AI..."
+          />
+        </div>
+
+        <div class="form-group" v-if="settings.ai_provider === 'ollama'">
+          <label class="label">Ollama Endpoint</label>
+          <input
+            type="text"
+            v-model="settings.ollama_endpoint"
+            class="input"
+            placeholder="http://ollama:11434"
+          />
+        </div>
+
+        <div v-if="testResult" :class="testResult.success ? 'success-message' : 'error-message'">
+          {{ testResult.message }}
+        </div>
+
+        <div class="form-group" v-if="settings.ai_provider === 'gemini' && availableModels.length > 0">
+          <label class="label">Gemini Model</label>
+          <select v-model="settings.gemini_model" class="select">
+            <option v-for="model in availableModels" :key="model.name" :value="model.name">
+              {{ model.display_name }}
+            </option>
+          </select>
+          <small style="color: var(--text-secondary);" v-if="settings.gemini_model">
+            {{ getModelDescription(settings.gemini_model) }}
+          </small>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button @click="testConnection" class="btn btn-outline" :disabled="testing">
+            {{ testing ? 'Testing...' : 'Test Connection' }}
+          </button>
+          <button @click="saveSettings" class="btn btn-primary" :disabled="saving">
+            {{ saving ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
       </div>
 
-      <div class="form-group" v-if="settings.ai_provider === 'claude'">
-        <label class="label">Claude API Key</label>
-        <input
-          type="password"
-          v-model="settings.claude_api_key"
-          class="input"
-          placeholder="sk-ant-..."
-        />
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 16px;">General Settings</h3>
+
+        <div class="form-group">
+          <label class="label">Default Currency</label>
+          <input
+            type="text"
+            v-model="settings.default_currency"
+            class="input"
+            placeholder="NOK"
+          />
+        </div>
       </div>
 
-      <div class="form-group" v-if="settings.ai_provider === 'openai'">
-        <label class="label">OpenAI API Key</label>
-        <input
-          type="password"
-          v-model="settings.openai_api_key"
-          class="input"
-          placeholder="sk-..."
-        />
-      </div>
-
-      <div class="form-group" v-if="settings.ai_provider === 'gemini'">
-        <label class="label">Gemini API Key</label>
-        <input
-          type="password"
-          v-model="settings.gemini_api_key"
-          class="input"
-          placeholder="AI..."
-        />
-      </div>
-
-      <div class="form-group" v-if="settings.ai_provider === 'ollama'">
-        <label class="label">Ollama Endpoint</label>
-        <input
-          type="text"
-          v-model="settings.ollama_endpoint"
-          class="input"
-          placeholder="http://ollama:11434"
-        />
-      </div>
-
-      <div v-if="testResult" :class="testResult.success ? 'success-message' : 'error-message'">
-        {{ testResult.message }}
-      </div>
-
-      <div class="form-group" v-if="settings.ai_provider === 'gemini' && availableModels.length > 0">
-        <label class="label">Gemini Model</label>
-        <select v-model="settings.gemini_model" class="select">
-          <option v-for="model in availableModels" :key="model.name" :value="model.name">
-            {{ model.display_name }}
-          </option>
-        </select>
-        <small style="color: var(--text-secondary);" v-if="settings.gemini_model">
-          {{ getModelDescription(settings.gemini_model) }}
-        </small>
-      </div>
-
-      <div style="display: flex; gap: 12px; margin-top: 16px;">
-        <button @click="testConnection" class="btn btn-outline" :disabled="testing">
-          {{ testing ? 'Testing...' : 'Test Connection' }}
-        </button>
-        <button @click="saveSettings" class="btn btn-primary" :disabled="saving">
-          {{ saving ? 'Saving...' : 'Save Settings' }}
-        </button>
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 16px;">Quick Links</h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <router-link to="/locations" class="btn btn-outline">Manage Locations</router-link>
+          <router-link to="/categories" class="btn btn-outline">Manage Categories</router-link>
+        </div>
       </div>
     </div>
 
-    <div class="card" style="margin-top: 16px;">
-      <h3 style="margin-bottom: 16px;">General Settings</h3>
+    <!-- Properties Tab -->
+    <div v-show="activeTab === 'properties'" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3>Home Details</h3>
+          <button @click="openPropertyModal()" class="btn btn-primary">+ Add Property</button>
+        </div>
 
-      <div class="form-group">
-        <label class="label">Default Currency</label>
-        <input
-          type="text"
-          v-model="settings.default_currency"
-          class="input"
-          placeholder="NOK"
-        />
-      </div>
-    </div>
+        <div v-if="loadingProperties" class="loading">
+          <div class="spinner"></div>
+        </div>
 
-    <!-- Home Details Section -->
-    <div class="card" style="margin-top: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3>Home Details</h3>
-        <button @click="openPropertyModal()" class="btn btn-primary">+ Add Property</button>
-      </div>
+        <div v-else-if="properties.length === 0" style="color: var(--text-secondary); padding: 16px; text-align: center;">
+          No properties configured. Add your first property to get started.
+        </div>
 
-      <div v-if="loadingProperties" class="loading">
-        <div class="spinner"></div>
-      </div>
-
-      <div v-else-if="properties.length === 0" style="color: var(--text-secondary); padding: 16px; text-align: center;">
-        No properties configured. Add your first property to get started.
-      </div>
-
-      <div v-else>
-        <div v-for="property in properties" :key="property.id" class="property-card">
-          <div class="property-header" @click="toggleProperty(property.id)">
-            <div>
-              <strong>{{ property.name }}</strong>
-              <div style="font-size: 12px; color: var(--text-secondary);">
-                {{ property.address_city }}, {{ property.address_country }}
-                <span v-if="property.property_type"> - {{ formatPropertyType(property.property_type) }}</span>
+        <div v-else>
+          <div v-for="property in properties" :key="property.id" class="property-card">
+            <div class="property-header" @click="toggleProperty(property.id)">
+              <div>
+                <strong>{{ property.name }}</strong>
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                  {{ property.address_city }}, {{ property.address_country }}
+                  <span v-if="property.property_type"> - {{ formatPropertyType(property.property_type) }}</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-secondary);">
+                  {{ property.policy_count }} {{ property.policy_count === 1 ? 'policy' : 'policies' }}
+                </span>
+                <span>{{ expandedProperties.includes(property.id) ? '▼' : '▶' }}</span>
               </div>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span style="font-size: 12px; color: var(--text-secondary);">
-                {{ property.policy_count }} {{ property.policy_count === 1 ? 'policy' : 'policies' }}
+
+            <div v-if="expandedProperties.includes(property.id)" class="property-details">
+              <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                <button @click="editProperty(property)" class="btn btn-outline btn-sm">Edit Property</button>
+                <button @click="confirmDeleteProperty(property.id)" class="btn btn-outline btn-sm btn-danger">Delete</button>
+                <button @click="openPolicyModal(property.id)" class="btn btn-primary btn-sm">+ Add Policy</button>
+              </div>
+
+              <!-- Insurance Policies List -->
+              <div v-if="propertyPolicies[property.id]?.length > 0">
+                <h4 style="margin-bottom: 8px; font-size: 14px;">Insurance Policies</h4>
+                <div v-for="policy in propertyPolicies[property.id]" :key="policy.id" class="policy-item">
+                  <div>
+                    <strong>{{ policy.name }}</strong> - {{ policy.company_name }}
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                      {{ formatPolicyType(policy.policy_type) }} | #{{ policy.policy_number }}
+                      <span v-if="policy.renewal_date"> | Renews: {{ formatDate(policy.renewal_date) }}</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <button @click="editPolicy(policy)" class="btn btn-outline btn-sm">Edit</button>
+                    <button @click="confirmDeletePolicy(policy.id, property.id)" class="btn btn-outline btn-sm btn-danger">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else style="color: var(--text-secondary); font-size: 14px;">
+                No insurance policies for this property.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backups Tab -->
+    <div v-show="activeTab === 'backups'" class="tab-content">
+      <!-- Backup Status Card -->
+      <div class="card">
+        <h3 style="margin-bottom: 16px;">Backup Status</h3>
+
+        <div v-if="loadingBackupStatus" class="loading">
+          <div class="spinner"></div>
+        </div>
+
+        <div v-else>
+          <div class="status-grid">
+            <div class="status-item">
+              <span class="status-label">Status</span>
+              <span :class="['status-value', backupStatus.enabled ? 'status-enabled' : 'status-disabled']">
+                {{ backupStatus.enabled ? 'Enabled' : 'Disabled' }}
               </span>
-              <span>{{ expandedProperties.includes(property.id) ? '▼' : '▶' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Interval</span>
+              <span class="status-value">Every {{ backupStatus.interval_hours }} hour(s)</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Last Backup</span>
+              <span class="status-value">{{ backupStatus.last_backup ? formatDateTime(backupStatus.last_backup) : 'Never' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Total Backups</span>
+              <span class="status-value">{{ backupStatus.count }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Total Size</span>
+              <span class="status-value">{{ formatSize(backupStatus.total_size) }}</span>
             </div>
           </div>
 
-          <div v-if="expandedProperties.includes(property.id)" class="property-details">
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-              <button @click="editProperty(property)" class="btn btn-outline btn-sm">Edit Property</button>
-              <button @click="confirmDeleteProperty(property.id)" class="btn btn-outline btn-sm btn-danger">Delete</button>
-              <button @click="openPolicyModal(property.id)" class="btn btn-primary btn-sm">+ Add Policy</button>
-            </div>
+          <div v-if="backupStatus.last_error" class="error-message" style="margin-top: 12px;">
+            Last error: {{ backupStatus.last_error }}
+          </div>
+        </div>
 
-            <!-- Insurance Policies List -->
-            <div v-if="propertyPolicies[property.id]?.length > 0">
-              <h4 style="margin-bottom: 8px; font-size: 14px;">Insurance Policies</h4>
-              <div v-for="policy in propertyPolicies[property.id]" :key="policy.id" class="policy-item">
-                <div>
-                  <strong>{{ policy.name }}</strong> - {{ policy.company_name }}
-                  <div style="font-size: 12px; color: var(--text-secondary);">
-                    {{ formatPolicyType(policy.policy_type) }} | #{{ policy.policy_number }}
-                    <span v-if="policy.renewal_date"> | Renews: {{ formatDate(policy.renewal_date) }}</span>
-                  </div>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                  <button @click="editPolicy(policy)" class="btn btn-outline btn-sm">Edit</button>
-                  <button @click="confirmDeletePolicy(policy.id, property.id)" class="btn btn-outline btn-sm btn-danger">Delete</button>
-                </div>
+        <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
+          <button @click="createBackup" class="btn btn-primary" :disabled="creatingBackup">
+            {{ creatingBackup ? 'Creating...' : 'Create Backup Now' }}
+          </button>
+          <button @click="downloadCurrentDb" class="btn btn-outline" :disabled="downloadingCurrent">
+            {{ downloadingCurrent ? 'Downloading...' : 'Download Current Database' }}
+          </button>
+          <button @click="showCleanupConfirm = true" class="btn btn-outline" :disabled="runningCleanup">
+            {{ runningCleanup ? 'Cleaning...' : 'Run Cleanup' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Retention Policy Info -->
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 12px;">Retention Policy</h3>
+        <div class="info-box">
+          <p><strong>Hourly:</strong> Keep all backups from the last {{ backupStatus.retention?.hourly_hours || 24 }} hours</p>
+          <p><strong>Daily:</strong> Keep one backup per day for the last {{ backupStatus.retention?.daily_days || 7 }} days (prefers midnight backups)</p>
+          <p><strong>Weekly:</strong> Keep one backup per week for the last {{ backupStatus.retention?.weekly_weeks || 4 }} weeks (prefers Sunday backups)</p>
+          <p><strong>Monthly:</strong> Keep one backup per month for the last {{ backupStatus.retention?.monthly_months || 12 }} months (prefers 1st of month)</p>
+        </div>
+      </div>
+
+      <!-- Backup List -->
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 16px;">Available Backups</h3>
+
+        <div v-if="loadingBackups" class="loading">
+          <div class="spinner"></div>
+        </div>
+
+        <div v-else-if="backups.length === 0" style="color: var(--text-secondary); padding: 16px; text-align: center;">
+          No backups available yet.
+        </div>
+
+        <div v-else class="backup-list">
+          <div v-for="backup in backups" :key="backup.filename" class="backup-item">
+            <div>
+              <strong>{{ backup.filename }}</strong>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                {{ formatDateTime(backup.created_at) }} - {{ formatSize(backup.size) }}
               </div>
             </div>
-            <div v-else style="color: var(--text-secondary); font-size: 14px;">
-              No insurance policies for this property.
-            </div>
+            <button
+              @click="downloadBackup(backup.filename)"
+              class="btn btn-outline btn-sm"
+              :disabled="downloadingFile === backup.filename"
+            >
+              {{ downloadingFile === backup.filename ? 'Downloading...' : 'Download' }}
+            </button>
           </div>
         </div>
       </div>
@@ -350,11 +472,17 @@
       </div>
     </div>
 
-    <div class="card" style="margin-top: 16px;">
-      <h3 style="margin-bottom: 16px;">Quick Links</h3>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <router-link to="/locations" class="btn btn-outline">Manage Locations</router-link>
-        <router-link to="/categories" class="btn btn-outline">Manage Categories</router-link>
+    <!-- Cleanup Confirmation Modal -->
+    <div v-if="showCleanupConfirm" class="modal-overlay" @click.self="showCleanupConfirm = false">
+      <div class="modal" style="max-width: 400px;">
+        <h2>Confirm Cleanup</h2>
+        <p style="margin: 16px 0;">
+          This will remove old backups according to the retention policy. This action cannot be undone.
+        </p>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button @click="showCleanupConfirm = false" class="btn btn-outline">Cancel</button>
+          <button @click="runCleanup" class="btn btn-primary">Run Cleanup</button>
+        </div>
       </div>
     </div>
   </div>
@@ -367,6 +495,15 @@ import api from '../services/api'
 export default {
   name: 'Settings',
   setup() {
+    // Tab state
+    const tabs = [
+      { id: 'general', label: 'General' },
+      { id: 'properties', label: 'Properties' },
+      { id: 'backups', label: 'Backups' }
+    ]
+    const activeTab = ref('general')
+
+    // Settings state
     const settings = ref({
       ai_provider: 'claude',
       claude_api_key: '',
@@ -397,6 +534,25 @@ export default {
     const savingPolicy = ref(false)
     const currentPropertyId = ref(null)
     const policyForm = ref(getEmptyPolicyForm())
+
+    // Backup state
+    const backupStatus = ref({
+      enabled: false,
+      interval_hours: 1,
+      last_backup: null,
+      last_error: null,
+      count: 0,
+      total_size: 0,
+      retention: {}
+    })
+    const backups = ref([])
+    const loadingBackupStatus = ref(true)
+    const loadingBackups = ref(true)
+    const creatingBackup = ref(false)
+    const downloadingCurrent = ref(false)
+    const downloadingFile = ref(null)
+    const runningCleanup = ref(false)
+    const showCleanupConfirm = ref(false)
 
     function getEmptyPropertyForm() {
       return {
@@ -436,6 +592,7 @@ export default {
       }
     }
 
+    // Settings methods
     const loadSettings = async () => {
       try {
         const { data } = await api.getSettings()
@@ -449,7 +606,6 @@ export default {
           default_currency: data.default_currency || 'NOK'
         }
 
-        // If Gemini is selected and we have an API key, load available models
         if (data.ai_provider === 'gemini' && data.gemini_api_key) {
           await loadGeminiModels()
         }
@@ -458,6 +614,67 @@ export default {
       }
     }
 
+    const testConnection = async () => {
+      testing.value = true
+      testResult.value = null
+
+      try {
+        const { data } = await api.testAI(
+          settings.value.ai_provider,
+          settings.value.ai_provider === 'claude' ? settings.value.claude_api_key :
+          settings.value.ai_provider === 'openai' ? settings.value.openai_api_key :
+          settings.value.ai_provider === 'gemini' ? settings.value.gemini_api_key : null,
+          settings.value.ollama_endpoint
+        )
+        testResult.value = data
+
+        if (settings.value.ai_provider === 'gemini' && data.available_models) {
+          availableModels.value = data.available_models
+          if (!settings.value.gemini_model && data.available_models.length > 0) {
+            settings.value.gemini_model = data.available_models[0].name
+          }
+        }
+      } catch (error) {
+        testResult.value = {
+          success: false,
+          message: 'Connection test failed: ' + error.message
+        }
+      } finally {
+        testing.value = false
+      }
+    }
+
+    const loadGeminiModels = async () => {
+      if (!settings.value.gemini_api_key) return
+
+      try {
+        const { data } = await api.testAI('gemini', settings.value.gemini_api_key, null)
+        if (data.available_models) {
+          availableModels.value = data.available_models
+        }
+      } catch (error) {
+        console.error('Failed to load Gemini models:', error)
+      }
+    }
+
+    const getModelDescription = (modelName) => {
+      const model = availableModels.value.find(m => m.name === modelName)
+      return model?.description || 'Multimodal AI model with vision support'
+    }
+
+    const saveSettings = async () => {
+      saving.value = true
+      try {
+        await api.updateSettings(settings.value)
+        alert('Settings saved successfully!')
+      } catch (error) {
+        alert('Failed to save settings: ' + error.message)
+      } finally {
+        saving.value = false
+      }
+    }
+
+    // Property methods
     const loadProperties = async () => {
       loadingProperties.value = true
       try {
@@ -491,7 +708,6 @@ export default {
       }
     }
 
-    // Property CRUD
     const openPropertyModal = () => {
       editingProperty.value = null
       propertyForm.value = getEmptyPropertyForm()
@@ -559,7 +775,6 @@ export default {
       try {
         await api.deleteProperty(propertyId)
         await loadProperties()
-        // Remove from expanded list if present
         const index = expandedProperties.value.indexOf(propertyId)
         if (index > -1) {
           expandedProperties.value.splice(index, 1)
@@ -570,7 +785,7 @@ export default {
       }
     }
 
-    // Policy CRUD
+    // Policy methods
     const openPolicyModal = (propertyId) => {
       currentPropertyId.value = propertyId
       editingPolicy.value = null
@@ -626,7 +841,7 @@ export default {
         const propId = currentPropertyId.value
         closePolicyModal()
         await loadPoliciesForProperty(propId)
-        await loadProperties() // Refresh policy counts
+        await loadProperties()
       } catch (error) {
         alert('Failed to save policy: ' + (error.response?.data?.detail || error.message))
       } finally {
@@ -641,9 +856,103 @@ export default {
       try {
         await api.deleteInsurancePolicy(policyId)
         await loadPoliciesForProperty(propertyId)
-        await loadProperties() // Refresh policy counts
+        await loadProperties()
       } catch (error) {
         alert('Failed to delete policy: ' + (error.response?.data?.detail || error.message))
+      }
+    }
+
+    // Backup methods
+    const loadBackupStatus = async () => {
+      loadingBackupStatus.value = true
+      try {
+        const { data } = await api.getBackupStatus()
+        backupStatus.value = data
+      } catch (error) {
+        console.error('Failed to load backup status:', error)
+      } finally {
+        loadingBackupStatus.value = false
+      }
+    }
+
+    const loadBackups = async () => {
+      loadingBackups.value = true
+      try {
+        const { data } = await api.listBackups()
+        backups.value = data.backups
+      } catch (error) {
+        console.error('Failed to load backups:', error)
+      } finally {
+        loadingBackups.value = false
+      }
+    }
+
+    const createBackup = async () => {
+      creatingBackup.value = true
+      try {
+        await api.createBackup()
+        alert('Backup created successfully!')
+        await loadBackupStatus()
+        await loadBackups()
+      } catch (error) {
+        alert('Failed to create backup: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        creatingBackup.value = false
+      }
+    }
+
+    const downloadCurrentDb = async () => {
+      downloadingCurrent.value = true
+      try {
+        const response = await api.downloadCurrentDatabase()
+        const blob = new Blob([response.data], { type: 'application/x-sqlite3' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = response.headers['content-disposition']?.split('filename=')[1] || 'homeregistry_current.db'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } catch (error) {
+        alert('Failed to download database: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        downloadingCurrent.value = false
+      }
+    }
+
+    const downloadBackup = async (filename) => {
+      downloadingFile.value = filename
+      try {
+        const response = await api.downloadBackup(filename)
+        const blob = new Blob([response.data], { type: 'application/x-sqlite3' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } catch (error) {
+        alert('Failed to download backup: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        downloadingFile.value = null
+      }
+    }
+
+    const runCleanup = async () => {
+      showCleanupConfirm.value = false
+      runningCleanup.value = true
+      try {
+        const { data } = await api.runBackupCleanup()
+        alert(`Cleanup complete: ${data.result.deleted} backup(s) removed, ${data.result.kept} kept.`)
+        await loadBackupStatus()
+        await loadBackups()
+      } catch (error) {
+        alert('Failed to run cleanup: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        runningCleanup.value = false
       }
     }
 
@@ -680,79 +989,35 @@ export default {
       return new Date(dateStr).toLocaleDateString()
     }
 
-    const testConnection = async () => {
-      testing.value = true
-      testResult.value = null
-
-      try {
-        const { data } = await api.testAI(
-          settings.value.ai_provider,
-          settings.value.ai_provider === 'claude' ? settings.value.claude_api_key :
-          settings.value.ai_provider === 'openai' ? settings.value.openai_api_key :
-          settings.value.ai_provider === 'gemini' ? settings.value.gemini_api_key : null,
-          settings.value.ollama_endpoint
-        )
-        testResult.value = data
-
-        // If Gemini and we got models, populate the list
-        if (settings.value.ai_provider === 'gemini' && data.available_models) {
-          availableModels.value = data.available_models
-          // Auto-select the first model if none selected
-          if (!settings.value.gemini_model && data.available_models.length > 0) {
-            settings.value.gemini_model = data.available_models[0].name
-          }
-        }
-      } catch (error) {
-        testResult.value = {
-          success: false,
-          message: 'Connection test failed: ' + error.message
-        }
-      } finally {
-        testing.value = false
-      }
+    const formatDateTime = (dateStr) => {
+      if (!dateStr) return ''
+      return new Date(dateStr).toLocaleString()
     }
 
-    const loadGeminiModels = async () => {
-      if (!settings.value.gemini_api_key) return
-
-      try {
-        const { data } = await api.testAI(
-          'gemini',
-          settings.value.gemini_api_key,
-          null
-        )
-        if (data.available_models) {
-          availableModels.value = data.available_models
-        }
-      } catch (error) {
-        console.error('Failed to load Gemini models:', error)
+    const formatSize = (bytes) => {
+      if (!bytes || bytes === 0) return '0 B'
+      const units = ['B', 'KB', 'MB', 'GB']
+      let i = 0
+      let size = bytes
+      while (size >= 1024 && i < units.length - 1) {
+        size /= 1024
+        i++
       }
-    }
-
-    const getModelDescription = (modelName) => {
-      const model = availableModels.value.find(m => m.name === modelName)
-      return model?.description || 'Multimodal AI model with vision support'
-    }
-
-    const saveSettings = async () => {
-      saving.value = true
-
-      try {
-        await api.updateSettings(settings.value)
-        alert('Settings saved successfully!')
-      } catch (error) {
-        alert('Failed to save settings: ' + error.message)
-      } finally {
-        saving.value = false
-      }
+      return `${size.toFixed(1)} ${units[i]}`
     }
 
     onMounted(() => {
       loadSettings()
       loadProperties()
+      loadBackupStatus()
+      loadBackups()
     })
 
     return {
+      // Tabs
+      tabs,
+      activeTab,
+      // Settings
       settings,
       testing,
       saving,
@@ -788,8 +1053,171 @@ export default {
       savePolicy,
       confirmDeletePolicy,
       formatPolicyType,
-      formatDate
+      formatDate,
+      // Backups
+      backupStatus,
+      backups,
+      loadingBackupStatus,
+      loadingBackups,
+      creatingBackup,
+      downloadingCurrent,
+      downloadingFile,
+      runningCleanup,
+      showCleanupConfirm,
+      createBackup,
+      downloadCurrentDb,
+      downloadBackup,
+      runCleanup,
+      formatDateTime,
+      formatSize
     }
   }
 }
 </script>
+
+<style scoped>
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-content {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.status-value {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.status-enabled {
+  color: #22c55e;
+}
+
+.status-disabled {
+  color: #ef4444;
+}
+
+.info-box {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.info-box p {
+  margin: 8px 0;
+}
+
+.info-box p:first-child {
+  margin-top: 0;
+}
+
+.info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.backup-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.backup-item:last-child {
+  border-bottom: none;
+}
+
+.property-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.property-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  background: var(--bg-secondary);
+}
+
+.property-header:hover {
+  background: var(--bg-tertiary, var(--bg-secondary));
+}
+
+.property-details {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.policy-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.policy-item:last-child {
+  margin-bottom: 0;
+}
+</style>
