@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
 from ..models.location import Location
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.location import LocationCreate, LocationUpdate, LocationResponse, LocationTree
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
@@ -34,7 +36,8 @@ def build_location_tree(locations: List[Location], parent_id: str = None) -> Lis
 @router.get("", response_model=List[LocationTree])
 async def get_locations(
     property_id: Optional[str] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get all locations as a tree, optionally filtered by property"""
     query = db.query(Location)
@@ -45,7 +48,7 @@ async def get_locations(
 
 
 @router.post("", response_model=LocationResponse)
-async def create_location(location: LocationCreate, db: Session = Depends(get_db)):
+async def create_location(location: LocationCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new location"""
     # Validate parent exists if provided
     if location.parent_id:
@@ -73,7 +76,7 @@ async def create_location(location: LocationCreate, db: Session = Depends(get_db
 
 
 @router.put("/{location_id}", response_model=LocationResponse)
-async def update_location(location_id: str, location: LocationUpdate, db: Session = Depends(get_db)):
+async def update_location(location_id: str, location: LocationUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update a location"""
     db_location = db.query(Location).filter(Location.id == location_id).first()
     if not db_location:
@@ -101,7 +104,7 @@ async def update_location(location_id: str, location: LocationUpdate, db: Sessio
 
 
 @router.delete("/{location_id}")
-async def delete_location(location_id: str, db: Session = Depends(get_db)):
+async def delete_location(location_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete a location (only if no items)"""
     db_location = db.query(Location).filter(Location.id == location_id).first()
     if not db_location:

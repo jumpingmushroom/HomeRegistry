@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from ..database import get_db
 from ..models.setting import Setting
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.setting import SettingUpdate, SettingResponse, TestAIRequest, TestAIResponse, GeminiModel
 from ..services.ai import ClaudeProvider, OpenAIProvider, OllamaProvider, GeminiProvider
 
@@ -27,7 +29,7 @@ def set_setting_value(db: Session, key: str, value: any):
 
 
 @router.get("", response_model=SettingResponse)
-async def get_settings(db: Session = Depends(get_db)):
+async def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all settings"""
     ai_provider = get_setting_value(db, "ai_provider", "claude")
     claude_key = get_setting_value(db, "claude_api_key")
@@ -51,7 +53,7 @@ async def get_settings(db: Session = Depends(get_db)):
 
 
 @router.put("", response_model=SettingResponse)
-async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db)):
+async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update settings"""
     if settings.ai_provider is not None:
         set_setting_value(db, "ai_provider", settings.ai_provider)
@@ -77,11 +79,11 @@ async def update_settings(settings: SettingUpdate, db: Session = Depends(get_db)
     if settings.setup_completed is not None:
         set_setting_value(db, "setup_completed", settings.setup_completed)
 
-    return await get_settings(db)
+    return await get_settings(db, current_user)
 
 
 @router.post("/test-ai", response_model=TestAIResponse)
-async def test_ai_connection(request: TestAIRequest):
+async def test_ai_connection(request: TestAIRequest, current_user: User = Depends(get_current_user)):
     """Test AI provider connection"""
     try:
         if request.provider == "claude":

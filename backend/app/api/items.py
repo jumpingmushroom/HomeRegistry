@@ -8,7 +8,12 @@ from ..database import get_db
 from ..models.item import Item
 from ..models.image import Image as ImageModel
 from ..models.category import Category
-from ..schemas.item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
+from ..models.user import User
+from ..services.auth_service import get_current_user
+from ..schemas.item import (
+    ItemCreate, ItemUpdate, ItemResponse, ItemListResponse,
+    BatchUpdateRequest, BatchDeleteRequest, BatchUpdateResponse, BatchDeleteResponse
+)
 from ..schemas.image import ImageResponse, ImageAnalysisResponse, AIAnalysisResult
 from ..schemas.document import DocumentResponse
 from ..services.image_service import ImageService
@@ -119,7 +124,8 @@ def get_ai_provider(db: Session):
 @router.post("/analyze-images", response_model=ImageAnalysisResponse)
 async def analyze_images(
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Analyze images with AI before creating an item"""
     if not files:
@@ -192,7 +198,8 @@ async def get_items(
     category_id: Optional[str] = None,
     location_id: Optional[str] = None,
     condition: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get all items with optional filters"""
     query = db.query(Item)
@@ -260,7 +267,7 @@ async def get_items(
 
 
 @router.post("", response_model=ItemResponse)
-async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
+async def create_item(item: ItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new item"""
     db_item = Item(**item.model_dump())
     db.add(db_item)
@@ -286,8 +293,63 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     )
 
 
+@router.post("/batch-update", response_model=BatchUpdateResponse)
+async def batch_update_items(request: BatchUpdateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Update multiple items at once with the same values"""
+    if not request.item_ids:
+        raise HTTPException(status_code=400, detail="No items specified")
+
+    # Build update dict with only provided fields
+    update_data = {}
+    if request.location_id is not None:
+        update_data["location_id"] = request.location_id
+    if request.condition is not None:
+        update_data["condition"] = request.condition
+    if request.category_id is not None:
+        update_data["category_id"] = request.category_id
+    if request.property_id is not None:
+        update_data["property_id"] = request.property_id
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    # Update all matching items
+    updated_count = db.query(Item).filter(
+        Item.id.in_(request.item_ids)
+    ).update(update_data, synchronize_session=False)
+
+    db.commit()
+
+    return BatchUpdateResponse(
+        updated_count=updated_count,
+        item_ids=request.item_ids
+    )
+
+
+@router.post("/batch-delete", response_model=BatchDeleteResponse)
+async def batch_delete_items(request: BatchDeleteRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Delete multiple items at once"""
+    if not request.item_ids:
+        raise HTTPException(status_code=400, detail="No items specified")
+
+    # Get items to delete (for cascade delete of images/documents)
+    items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
+
+    deleted_ids = []
+    for item in items:
+        deleted_ids.append(item.id)
+        db.delete(item)
+
+    db.commit()
+
+    return BatchDeleteResponse(
+        deleted_count=len(deleted_ids),
+        item_ids=deleted_ids
+    )
+
+
 @router.get("/{item_id}", response_model=ItemResponse)
-async def get_item(item_id: str, db: Session = Depends(get_db)):
+async def get_item(item_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get item by ID"""
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
@@ -315,7 +377,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{item_id}", response_model=ItemResponse)
-async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_db)):
+async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update an item"""
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if not db_item:
@@ -350,7 +412,7 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
 
 
 @router.delete("/{item_id}")
-async def delete_item(item_id: str, db: Session = Depends(get_db)):
+async def delete_item(item_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete an item"""
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if not db_item:
@@ -367,7 +429,8 @@ async def delete_item(item_id: str, db: Session = Depends(get_db)):
 async def add_item_image(
     item_id: str,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Add an image to an existing item"""
     item = db.query(Item).filter(Item.id == item_id).first()

@@ -30,11 +30,8 @@
         /* Cover Page */
         .cover-page {
             page-break-after: always;
-            min-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
             text-align: center;
+            padding-top: 150px;
         }
 
         .cover-title {
@@ -47,7 +44,7 @@
         .cover-subtitle {
             font-size: 18px;
             color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 60px;
         }
 
         .cover-property {
@@ -60,37 +57,41 @@
         .cover-address {
             font-size: 14px;
             color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 60px;
         }
 
         .cover-summary {
             background: #f8f9fa;
-            padding: 20px;
+            padding: 25px 50px;
             border-radius: 8px;
-            display: inline-block;
-            margin: 0 auto 40px;
+            margin: 0 auto 60px;
+            width: 350px;
         }
 
-        .cover-summary-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 40px;
-            margin-bottom: 10px;
+        .cover-summary table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cover-summary td {
+            padding: 8px 0;
         }
 
         .cover-summary-label {
             color: #666;
+            text-align: left;
         }
 
         .cover-summary-value {
             font-weight: bold;
             font-size: 16px;
+            text-align: right;
         }
 
         .cover-date {
             font-size: 12px;
             color: #999;
-            margin-top: 40px;
+            margin-top: 60px;
         }
 
         /* Section Headers */
@@ -179,9 +180,21 @@
             border: 1px solid #ddd;
             padding: 10px;
             margin-bottom: 10px;
-            display: flex;
-            gap: 12px;
             page-break-inside: avoid;
+        }
+
+        .item-card-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .item-card-table td {
+            vertical-align: top;
+        }
+
+        .item-image-cell {
+            width: 90px;
+            padding-right: 12px;
         }
 
         .item-image {
@@ -189,7 +202,6 @@
             height: 80px;
             object-fit: cover;
             border-radius: 4px;
-            flex-shrink: 0;
             background: #f0f0f0;
         }
 
@@ -198,37 +210,31 @@
             height: 80px;
             background: #e0e0e0;
             border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-align: center;
+            line-height: 80px;
             color: #999;
             font-size: 10px;
-            flex-shrink: 0;
         }
 
         .item-details {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
         }
 
         .item-name {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             color: #2c3e50;
         }
 
         .item-meta {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 4px;
-            font-size: 10px;
+            margin-bottom: 6px;
+            font-size: 11px;
             color: #666;
         }
 
-        .item-meta-item {
-            display: flex;
-            gap: 3px;
+        .item-meta span {
+            margin-right: 20px;
         }
 
         .item-meta-label {
@@ -238,24 +244,22 @@
         .item-description {
             font-size: 10px;
             color: #666;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
+            margin-bottom: 6px;
+            line-height: 1.4;
         }
 
         .item-identifiers {
             font-size: 9px;
             color: #888;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .item-values {
-            display: flex;
-            gap: 20px;
-            font-size: 10px;
+            font-size: 11px;
+        }
+
+        .item-values span {
+            margin-right: 25px;
         }
 
         .item-value-label {
@@ -270,7 +274,7 @@
         .item-receipt-link {
             font-size: 9px;
             color: #3498db;
-            margin-top: 4px;
+            margin-top: 6px;
         }
 
         /* Image Receipt Embed */
@@ -351,18 +355,20 @@
         </div>
 
         <div class="cover-summary">
-            <div class="cover-summary-row">
-                <span class="cover-summary-label">Total Items:</span>
-                <span class="cover-summary-value">{{ total_items }}</span>
-            </div>
-            <div class="cover-summary-row">
-                <span class="cover-summary-label">Total Value:</span>
-                <span class="cover-summary-value">kr {{ "{:,.0f}".format(total_value) }}</span>
-            </div>
-            <div class="cover-summary-row">
-                <span class="cover-summary-label">Owner:</span>
-                <span class="cover-summary-value">{{ property.primary_contact_name }}</span>
-            </div>
+            <table>
+                <tr>
+                    <td class="cover-summary-label">Total Items:</td>
+                    <td class="cover-summary-value">{{ total_items }}</td>
+                </tr>
+                <tr>
+                    <td class="cover-summary-label">Total Value:</td>
+                    <td class="cover-summary-value">kr {{ "{:,.0f}".format(total_value) }}</td>
+                </tr>
+                <tr>
+                    <td class="cover-summary-label">Owner:</td>
+                    <td class="cover-summary-value">{{ property.primary_contact_name }}</td>
+                </tr>
+            </table>
         </div>
 
         <div class="cover-date">
@@ -438,80 +444,73 @@
 
     {% for item in location["items"] %}
     <div class="item-card">
-        {% set img_path = None %}
-        {% for img in item.images %}
-            {% if img.is_primary or loop.first %}
-                {% set img_path = images_path + '/thumbnails/' + img.filename %}
-            {% endif %}
-        {% endfor %}
-
-        {% if item.images %}
-        <img class="item-image" src="file://{{ images_path }}/thumbnails/{{ item.images[0].filename }}" alt="{{ item.name }}">
-        {% else %}
-        <div class="item-placeholder">No Image</div>
-        {% endif %}
-
-        <div class="item-details">
-            <div class="item-name">{{ item.name }}</div>
-
-            <div class="item-meta">
-                {% if item.category %}
-                <span class="item-meta-item">
-                    <span class="item-meta-label">Category:</span>
-                    <span>{{ item.category.name }}</span>
-                </span>
-                {% endif %}
-                {% if item.condition %}
-                <span class="item-meta-item">
-                    <span class="item-meta-label">Condition:</span>
-                    <span>{{ item.condition.value|capitalize }}</span>
-                </span>
-                {% endif %}
-            </div>
-
-            {% if item.description %}
-            <div class="item-description">{{ item.description }}</div>
-            {% endif %}
-
-            <div class="item-identifiers">
-                {% if item.manufacturer %}Manufacturer: {{ item.manufacturer }} | {% endif %}
-                {% if item.model_number %}Model: {{ item.model_number }} | {% endif %}
-                {% if item.serial_number %}S/N: {{ item.serial_number }}{% endif %}
-            </div>
-
-            <div class="item-values">
-                {% if item.purchase_price %}
-                <span>
-                    <span class="item-value-label">Purchase:</span>
-                    <span class="item-value-amount">kr {{ "{:,.0f}".format(item.purchase_price) }}</span>
-                    {% if item.purchase_date %}({{ item.purchase_date.strftime('%Y-%m-%d') }}){% endif %}
-                </span>
-                {% endif %}
-                {% if item.current_value %}
-                <span>
-                    <span class="item-value-label">Current Value:</span>
-                    <span class="item-value-amount">kr {{ "{:,.0f}".format(item.current_value) }}</span>
-                </span>
-                {% endif %}
-            </div>
-
-            {% if item.id in item_appendix_map %}
-            <div class="item-receipt-link">
-                Receipt(s):
-                {% for label, doc in item_appendix_map[item.id] %}
-                    {% if doc.mime_type == 'application/pdf' %}
-                    See Appendix {{ label }}{% if not loop.last %}, {% endif %}
+        <table class="item-card-table">
+            <tr>
+                <td class="item-image-cell">
+                    {% if item.id in item_images %}
+                    <img class="item-image" src="data:image/jpeg;base64,{{ item_images[item.id] }}" alt="{{ item.name }}">
+                    {% else %}
+                    <div class="item-placeholder">No Image</div>
                     {% endif %}
-                {% endfor %}
-            </div>
-            <!-- Embed image receipts inline -->
-            {% for label, doc in item_appendix_map[item.id] %}
-                {% if doc.mime_type.startswith('image/') %}
-                <img class="receipt-image" src="file://{{ documents_path }}/{{ doc.filename }}" alt="Receipt">
-                {% endif %}
-            {% endfor %}
-            {% endif %}
-        </div>
+                </td>
+                <td class="item-details">
+                    <div class="item-name">{{ item.name }}</div>
+
+                    <div class="item-meta">
+                        {% if item.category %}
+                        <span><span class="item-meta-label">Category:</span> {{ item.category.name }}</span>
+                        {% endif %}
+                        {% if item.condition %}
+                        <span><span class="item-meta-label">Condition:</span> {{ item.condition.value|capitalize }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if item.description %}
+                    <div class="item-description">{{ item.description }}</div>
+                    {% endif %}
+
+                    {% if item.manufacturer or item.model_number or item.serial_number %}
+                    <div class="item-identifiers">
+                        {% if item.manufacturer %}Manufacturer: {{ item.manufacturer }}{% endif %}
+                        {% if item.model_number %}{% if item.manufacturer %} | {% endif %}Model: {{ item.model_number }}{% endif %}
+                        {% if item.serial_number %}{% if item.manufacturer or item.model_number %} | {% endif %}S/N: {{ item.serial_number }}{% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="item-values">
+                        {% if item.purchase_price %}
+                        <span>
+                            <span class="item-value-label">Purchase:</span>
+                            <span class="item-value-amount">kr {{ "{:,.0f}".format(item.purchase_price) }}</span>
+                            {% if item.purchase_date %}({{ item.purchase_date.strftime('%Y-%m-%d') }}){% endif %}
+                        </span>
+                        {% endif %}
+                        {% if item.current_value %}
+                        <span>
+                            <span class="item-value-label">Current Value:</span>
+                            <span class="item-value-amount">kr {{ "{:,.0f}".format(item.current_value) }}</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if item.id in item_appendix_map %}
+                    <div class="item-receipt-link">
+                        Receipt(s):
+                        {% for label, doc in item_appendix_map[item.id] %}
+                            {% if doc.mime_type == 'application/pdf' %}
+                            See Appendix {{ label }}{% if not loop.last %}, {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% for label, doc in item_appendix_map[item.id] %}
+                        {% if doc.mime_type.startswith('image/') and doc.id in receipt_images %}
+                        <img class="receipt-image" src="data:{{ doc.mime_type }};base64,{{ receipt_images[doc.id] }}" alt="Receipt">
+                        {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
     </div>
     {% endfor %}
     {% endfor %}

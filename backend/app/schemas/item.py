@@ -74,3 +74,29 @@ class ItemListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class BatchUpdateRequest(BaseModel):
+    """Request to batch update multiple items"""
+    item_ids: List[str]
+    location_id: Optional[str] = None
+    condition: Optional[ItemCondition] = None
+    category_id: Optional[str] = None
+    property_id: Optional[str] = None
+
+
+class BatchDeleteRequest(BaseModel):
+    """Request to batch delete multiple items"""
+    item_ids: List[str]
+
+
+class BatchUpdateResponse(BaseModel):
+    """Response from batch update operation"""
+    updated_count: int
+    item_ids: List[str]
+
+
+class BatchDeleteResponse(BaseModel):
+    """Response from batch delete operation"""
+    deleted_count: int
+    item_ids: List[str]

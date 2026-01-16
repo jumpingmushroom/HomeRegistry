@@ -281,7 +281,7 @@
 
         <!-- Documents Section in View Mode -->
         <div v-if="item.documents && item.documents.length > 0" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
-          <h3 style="margin-bottom: 16px;">📎 Attached Documents</h3>
+          <h3 style="margin-bottom: 16px;">Attached Documents</h3>
           <div class="grid grid-2">
             <a v-for="doc in item.documents" :key="doc.id"
                :href="getDocumentUrl(doc.id)"
@@ -299,6 +299,32 @@
                 </div>
               </div>
             </a>
+          </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+          <h3 style="margin-bottom: 16px;">QR Code</h3>
+          <div style="display: flex; gap: 24px; align-items: start; flex-wrap: wrap;">
+            <div style="background: white; padding: 16px; border-radius: var(--border-radius); display: inline-block;">
+              <img :src="getQrCodeUrl()" alt="Item QR Code" style="width: 150px; height: 150px;" />
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+              <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                Scan this QR code to quickly look up this item. Print and attach it to the physical item for easy identification.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a :href="getQrCodeUrl()" download :download="'qr_' + item.id + '.png'" class="btn btn-primary">
+                  Download QR Code
+                </a>
+                <button @click="copyPublicLink" class="btn btn-outline">
+                  Copy Link
+                </button>
+              </div>
+              <div v-if="linkCopied" style="color: var(--primary-color); font-size: 12px; margin-top: 8px;">
+                Link copied to clipboard!
+              </div>
+            </div>
           </div>
         </div>
 
@@ -333,6 +359,7 @@ export default {
     const locations = ref([])
     const newDocumentType = ref('receipt')
     const uploadingDocument = ref(false)
+    const linkCopied = ref(false)
     const editForm = ref({
       name: '',
       description: '',
@@ -590,6 +617,35 @@ export default {
         .filter(tag => tag.length > 0)
     }
 
+    const getQrCodeUrl = () => {
+      // Use the current origin as the base URL for the QR code
+      const baseUrl = window.location.origin
+      return api.getItemQrCodeUrl(route.params.id, baseUrl)
+    }
+
+    const copyPublicLink = async () => {
+      const publicUrl = `${window.location.origin}/public/items/${route.params.id}`
+      try {
+        await navigator.clipboard.writeText(publicUrl)
+        linkCopied.value = true
+        setTimeout(() => {
+          linkCopied.value = false
+        }, 3000)
+      } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = publicUrl
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        linkCopied.value = true
+        setTimeout(() => {
+          linkCopied.value = false
+        }, 3000)
+      }
+    }
+
     onMounted(async () => {
       await loadItem()
       loadCategories()
@@ -627,7 +683,10 @@ export default {
       getDocumentIcon,
       handleDocumentSelect,
       deleteDocument,
-      updateEditTags
+      updateEditTags,
+      getQrCodeUrl,
+      copyPublicLink,
+      linkCopied
     }
   }
 }

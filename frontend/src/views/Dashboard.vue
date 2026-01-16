@@ -115,19 +115,33 @@ export default {
       return new Date(dateStr).toLocaleDateString('nb-NO')
     }
 
-    const generateReport = () => {
+    const generateReport = async () => {
       if (!selectedPropertyId.value) {
         alert('Please select a property first')
         return
       }
       generatingReport.value = true
-      // Open the report URL in a new tab to trigger download
-      const reportUrl = api.getInsuranceReportUrl(selectedPropertyId.value)
-      window.open(reportUrl, '_blank')
-      // Reset after a short delay (download should start immediately)
-      setTimeout(() => {
+      try {
+        // Fetch the PDF and trigger download
+        const reportUrl = api.getInsuranceReportUrl(selectedPropertyId.value)
+        const response = await fetch(reportUrl)
+        if (!response.ok) throw new Error('Failed to generate report')
+
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `insurance_report_${selectedPropertyId.value}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('Failed to generate report:', error)
+        alert('Failed to generate report. Please try again.')
+      } finally {
         generatingReport.value = false
-      }, 2000)
+      }
     }
 
     // Reload stats when selected property changes

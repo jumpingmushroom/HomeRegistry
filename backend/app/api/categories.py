@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
 from ..models.category import Category
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryTree
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
@@ -27,14 +29,14 @@ def build_category_tree(categories: List[Category], parent_id: str = None) -> Li
 
 
 @router.get("", response_model=List[CategoryTree])
-async def get_categories(db: Session = Depends(get_db)):
+async def get_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all categories as a tree"""
     categories = db.query(Category).all()
     return build_category_tree(categories)
 
 
 @router.post("", response_model=CategoryResponse)
-async def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
+async def create_category(category: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new category"""
     # Validate parent exists if provided
     if category.parent_id:
@@ -57,7 +59,7 @@ async def create_category(category: CategoryCreate, db: Session = Depends(get_db
 
 
 @router.put("/{category_id}", response_model=CategoryResponse)
-async def update_category(category_id: str, category: CategoryUpdate, db: Session = Depends(get_db)):
+async def update_category(category_id: str, category: CategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update a category"""
     db_category = db.query(Category).filter(Category.id == category_id).first()
     if not db_category:
@@ -80,7 +82,7 @@ async def update_category(category_id: str, category: CategoryUpdate, db: Sessio
 
 
 @router.delete("/{category_id}")
-async def delete_category(category_id: str, db: Session = Depends(get_db)):
+async def delete_category(category_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete a category (only if no items)"""
     db_category = db.query(Category).filter(Category.id == category_id).first()
     if not db_category:

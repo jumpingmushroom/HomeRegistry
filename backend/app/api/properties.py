@@ -3,13 +3,15 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
 from ..models.property import Property
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PropertyListResponse
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
 
 @router.get("", response_model=List[PropertyListResponse])
-async def get_properties(db: Session = Depends(get_db)):
+async def get_properties(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all properties with policy counts"""
     properties = db.query(Property).all()
     return [
@@ -26,7 +28,7 @@ async def get_properties(db: Session = Depends(get_db)):
 
 
 @router.get("/{property_id}", response_model=PropertyResponse)
-async def get_property(property_id: str, db: Session = Depends(get_db)):
+async def get_property(property_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get a single property with its insurance policies"""
     property = db.query(Property).filter(Property.id == property_id).first()
     if not property:
@@ -35,7 +37,7 @@ async def get_property(property_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=PropertyResponse)
-async def create_property(property: PropertyCreate, db: Session = Depends(get_db)):
+async def create_property(property: PropertyCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new property"""
     db_property = Property(**property.model_dump())
     db.add(db_property)
@@ -45,7 +47,7 @@ async def create_property(property: PropertyCreate, db: Session = Depends(get_db
 
 
 @router.put("/{property_id}", response_model=PropertyResponse)
-async def update_property(property_id: str, property: PropertyUpdate, db: Session = Depends(get_db)):
+async def update_property(property_id: str, property: PropertyUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Update a property"""
     db_property = db.query(Property).filter(Property.id == property_id).first()
     if not db_property:
@@ -60,7 +62,7 @@ async def update_property(property_id: str, property: PropertyUpdate, db: Sessio
 
 
 @router.delete("/{property_id}")
-async def delete_property(property_id: str, db: Session = Depends(get_db)):
+async def delete_property(property_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete a property and its insurance policies"""
     db_property = db.query(Property).filter(Property.id == property_id).first()
     if not db_property:

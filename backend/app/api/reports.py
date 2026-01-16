@@ -6,13 +6,15 @@ from ..models.property import Property
 from ..models.insurance_policy import InsurancePolicy
 from ..models.item import Item
 from ..models.location import Location
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..services.report_service import ReportService
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
 @router.get("/insurance/{property_id}")
-async def generate_insurance_report(property_id: str, db: Session = Depends(get_db)):
+async def generate_insurance_report(property_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Generate an insurance inventory report PDF for a property."""
 
     # Fetch property

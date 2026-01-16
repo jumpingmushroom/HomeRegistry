@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.image import Image
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.image import ImageResponse
 from ..services.image_service import ImageService
 
@@ -10,7 +12,7 @@ router = APIRouter(prefix="/api/images", tags=["images"])
 
 
 @router.delete("/{image_id}")
-async def delete_image(image_id: str, db: Session = Depends(get_db)):
+async def delete_image(image_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete an image"""
     db_image = db.query(Image).filter(Image.id == image_id).first()
     if not db_image:
@@ -29,7 +31,7 @@ async def delete_image(image_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{image_id}/primary", response_model=ImageResponse)
-async def set_primary_image(image_id: str, db: Session = Depends(get_db)):
+async def set_primary_image(image_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Set an image as primary for its item"""
     db_image = db.query(Image).filter(Image.id == image_id).first()
     if not db_image:
@@ -51,7 +53,7 @@ async def set_primary_image(image_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{image_id}/file")
 async def get_image_file(image_id: str, thumbnail: bool = False, db: Session = Depends(get_db)):
-    """Get image file"""
+    """Get image file. No auth required - image IDs are UUIDs obtained from authenticated endpoints."""
     db_image = db.query(Image).filter(Image.id == image_id).first()
     if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")

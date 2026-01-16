@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.document import Document, DocumentType
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.document import DocumentResponse
 from ..services.storage_service import StorageService
 
@@ -14,7 +16,8 @@ async def upload_document(
     item_id: str,
     file: UploadFile = File(...),
     document_type: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Upload a document for an item"""
     from ..models.item import Item
@@ -54,7 +57,7 @@ async def upload_document(
 
 
 @router.get("/documents/{document_id}", response_class=FileResponse)
-async def download_document(document_id: str, db: Session = Depends(get_db)):
+async def download_document(document_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Download a document"""
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
@@ -71,7 +74,7 @@ async def download_document(document_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/documents/{document_id}")
-async def delete_document(document_id: str, db: Session = Depends(get_db)):
+async def delete_document(document_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete a document"""
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:

@@ -1,9 +1,9 @@
 <template>
   <div id="app">
-    <nav class="nav" v-if="!isSetupRoute">
+    <nav class="nav" v-if="showNav">
       <div class="nav-content">
         <div class="nav-left">
-          <div class="nav-title">🏠 HomeRegistry</div>
+          <div class="nav-title">HomeRegistry</div>
           <select
             v-if="properties.length > 0"
             v-model="selectedPropertyId"
@@ -15,15 +15,21 @@
             </option>
           </select>
         </div>
-        <button @click="toggleDarkMode" class="theme-toggle" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-          {{ isDarkMode ? '☀️' : '🌙' }}
-        </button>
+        <div class="nav-right">
+          <span v-if="currentUser" class="user-info">{{ currentUser.username }}</span>
+          <button @click="toggleDarkMode" class="theme-toggle" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+            {{ isDarkMode ? '☀️' : '🌙' }}
+          </button>
+          <button v-if="isAuthenticated" @click="handleLogout" class="logout-btn" title="Logout">
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
 
     <router-view />
 
-    <nav class="bottom-nav" v-if="!isSetupRoute">
+    <nav class="bottom-nav" v-if="showNav">
       <router-link to="/" class="bottom-nav-item" :class="{ active: $route.path === '/' }">
         <div class="bottom-nav-icon">📊</div>
         <div>Dashboard</div>
@@ -48,12 +54,14 @@
 import { computed, onMounted, ref, provide, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from './services/api'
+import { useAuthStore } from './stores/auth'
 
 export default {
   name: 'App',
   setup() {
     const router = useRouter()
     const route = useRoute()
+    const authStore = useAuthStore()
     const isDarkMode = ref(false)
     const properties = ref([])
     const selectedPropertyId = ref(null)
@@ -63,6 +71,10 @@ export default {
     provide('properties', properties)
 
     const isSetupRoute = computed(() => route.path === '/setup')
+    const isAuthRoute = computed(() => route.path === '/login' || route.path === '/register')
+    const showNav = computed(() => !isSetupRoute.value && !isAuthRoute.value && authStore.isAuthenticated)
+    const isAuthenticated = computed(() => authStore.isAuthenticated)
+    const currentUser = computed(() => authStore.currentUser)
 
     const initDarkMode = () => {
       const savedTheme = localStorage.getItem('theme')
@@ -117,29 +129,44 @@ export default {
       }
     }
 
+    const handleLogout = () => {
+      authStore.logout()
+      router.push('/login')
+    }
+
     onMounted(async () => {
       initDarkMode()
 
-      try {
-        const { data: settings } = await api.getSettings()
-        if (!settings.setup_completed && route.path !== '/setup') {
-          router.push('/setup')
-        } else {
-          // Load properties after setup is complete
-          await loadProperties()
+      // Initialize auth store (check if we have a valid token)
+      await authStore.initialize()
+
+      // Only check setup status if authenticated
+      if (authStore.isAuthenticated) {
+        try {
+          const { data: settings } = await api.getSettings()
+          if (!settings.setup_completed && route.path !== '/setup') {
+            router.push('/setup')
+          } else {
+            // Load properties after setup is complete
+            await loadProperties()
+          }
+        } catch (error) {
+          console.error('Failed to check setup status:', error)
         }
-      } catch (error) {
-        console.error('Failed to check setup status:', error)
       }
     })
 
     return {
       isSetupRoute,
+      showNav,
       isDarkMode,
       toggleDarkMode,
       properties,
       selectedPropertyId,
-      onPropertyChange
+      onPropertyChange,
+      isAuthenticated,
+      currentUser,
+      handleLogout
     }
   }
 }

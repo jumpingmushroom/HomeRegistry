@@ -1,5 +1,6 @@
 import io
 import os
+import base64
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from collections import defaultdict
@@ -68,12 +69,30 @@ class ReportService:
         # Find items without receipts
         items_without_receipts = [item for item in items if item.id not in item_appendix_map]
 
+        # Load item images as base64
+        item_images = {}
+        for item in items:
+            image_data = self._get_item_image_base64(item)
+            if image_data:
+                item_images[item.id] = image_data
+
+        # Load receipt images as base64
+        receipt_images = {}
+        for item_id, appendix_list in item_appendix_map.items():
+            for label, doc in appendix_list:
+                if doc.mime_type.startswith('image/'):
+                    image_data = self._get_document_image_base64(doc)
+                    if image_data:
+                        receipt_images[doc.id] = image_data
+
         # Prepare template data
         template_data = {
             "property": property,
             "policies": policies,
             "items_by_location": items_by_location,
             "item_appendix_map": item_appendix_map,
+            "item_images": item_images,
+            "receipt_images": receipt_images,
             "total_items": total_items,
             "total_value": total_value,
             "value_by_category": dict(value_by_category),
@@ -218,4 +237,46 @@ class ReportService:
             if os.path.exists(full_path):
                 return full_path
 
+        return None
+
+    def _get_item_image_base64(self, item: Item) -> Optional[str]:
+        """Get the primary image for an item as base64 encoded string."""
+        primary_image = next((img for img in item.images if img.is_primary), None)
+        if not primary_image:
+            primary_image = item.images[0] if item.images else None
+
+        if not primary_image:
+            return None
+
+        # Try thumbnail first
+        thumbnail_path = os.path.join(
+            settings.images_path, "thumbnails", primary_image.filename
+        )
+        if os.path.exists(thumbnail_path):
+            try:
+                with open(thumbnail_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+            except Exception:
+                pass
+
+        # Fall back to full image
+        full_path = os.path.join(settings.images_path, primary_image.filename)
+        if os.path.exists(full_path):
+            try:
+                with open(full_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+            except Exception:
+                pass
+
+        return None
+
+    def _get_document_image_base64(self, doc: Document) -> Optional[str]:
+        """Get a document image as base64 encoded string."""
+        doc_path = os.path.join(settings.documents_path, doc.filename)
+        if os.path.exists(doc_path):
+            try:
+                with open(doc_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+            except Exception:
+                pass
         return None

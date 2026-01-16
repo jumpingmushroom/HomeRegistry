@@ -4,6 +4,8 @@ from typing import List, Optional
 from ..database import get_db
 from ..models.insurance_policy import InsurancePolicy
 from ..models.property import Property
+from ..models.user import User
+from ..services.auth_service import get_current_user
 from ..schemas.insurance_policy import InsurancePolicyCreate, InsurancePolicyUpdate, InsurancePolicyResponse
 
 router = APIRouter(prefix="/api/insurance-policies", tags=["insurance-policies"])
@@ -12,7 +14,8 @@ router = APIRouter(prefix="/api/insurance-policies", tags=["insurance-policies"]
 @router.get("", response_model=List[InsurancePolicyResponse])
 async def get_insurance_policies(
     property_id: Optional[str] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get all insurance policies, optionally filtered by property"""
     query = db.query(InsurancePolicy)
@@ -48,7 +51,7 @@ async def get_insurance_policies(
 
 
 @router.get("/{policy_id}", response_model=InsurancePolicyResponse)
-async def get_insurance_policy(policy_id: str, db: Session = Depends(get_db)):
+async def get_insurance_policy(policy_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get a single insurance policy"""
     policy = db.query(InsurancePolicy).filter(InsurancePolicy.id == policy_id).first()
     if not policy:
@@ -78,7 +81,7 @@ async def get_insurance_policy(policy_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=InsurancePolicyResponse)
-async def create_insurance_policy(policy: InsurancePolicyCreate, db: Session = Depends(get_db)):
+async def create_insurance_policy(policy: InsurancePolicyCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new insurance policy"""
     # Validate property exists
     property = db.query(Property).filter(Property.id == policy.property_id).first()
@@ -117,7 +120,8 @@ async def create_insurance_policy(policy: InsurancePolicyCreate, db: Session = D
 async def update_insurance_policy(
     policy_id: str,
     policy: InsurancePolicyUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Update an insurance policy"""
     db_policy = db.query(InsurancePolicy).filter(InsurancePolicy.id == policy_id).first()
@@ -154,7 +158,7 @@ async def update_insurance_policy(
 
 
 @router.delete("/{policy_id}")
-async def delete_insurance_policy(policy_id: str, db: Session = Depends(get_db)):
+async def delete_insurance_policy(policy_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Delete an insurance policy"""
     db_policy = db.query(InsurancePolicy).filter(InsurancePolicy.id == policy_id).first()
     if not db_policy:
