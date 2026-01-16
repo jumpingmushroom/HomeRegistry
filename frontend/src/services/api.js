@@ -299,5 +299,11 @@ export default {
 
   runBackupCleanup() {
     return api.delete('/backup/cleanup')
+  },
+
+  exportAllData() {
+    return api.get('/backup/export', {
+      responseType: 'blob'
+    })
   }
 }

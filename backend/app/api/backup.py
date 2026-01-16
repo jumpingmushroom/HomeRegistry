@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 from ..models.user import User
 from ..services.auth_service import get_current_user
 from ..services.backup_service import backup_service
+from ..services.export_service import export_service
+from ..database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -142,3 +144,39 @@ async def get_backup_status(current_user: User = Depends(get_current_user)):
 
     status_info = backup_service.get_status()
     return status_info
+
+
+@router.get("/export")
+async def export_all_data(current_user: User = Depends(get_current_user)):
+    """
+    Export all data as a ZIP archive.
+
+    Includes:
+    - data.json: All structured data (items, categories, locations, properties, etc.)
+    - items.csv: Spreadsheet-friendly flat export of items
+    - images/: All item images organized by item ID
+    - documents/: All item documents organized by item ID
+    """
+    logger.info(f"Full data export requested by user: {current_user.id}")
+
+    db = SessionLocal()
+    try:
+        zip_path = export_service.create_export_zip(db)
+
+        # Get filename from path
+        filename = os.path.basename(zip_path)
+
+        return FileResponse(
+            path=zip_path,
+            filename=filename,
+            media_type="application/zip",
+            background=None  # Don't delete file immediately
+        )
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Export failed: {e}"
+        )
+    finally:
+        db.close()

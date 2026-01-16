@@ -280,6 +280,23 @@
           </div>
         </div>
       </div>
+
+      <!-- Export Data -->
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 12px;">Export Data</h3>
+        <div class="info-box" style="margin-bottom: 16px;">
+          <p>Download a complete backup of your inventory in a portable format. The export includes:</p>
+          <ul style="margin: 8px 0 0 20px; padding: 0;">
+            <li><strong>data.json</strong> - All structured data (items, categories, locations, properties, insurance policies)</li>
+            <li><strong>items.csv</strong> - Spreadsheet-friendly export of all items</li>
+            <li><strong>images/</strong> - All item images organized by item</li>
+            <li><strong>documents/</strong> - All item documents (receipts, manuals, warranties)</li>
+          </ul>
+        </div>
+        <button @click="exportAllData" class="btn btn-primary" :disabled="exporting">
+          {{ exporting ? 'Generating Export...' : 'Download Full Export' }}
+        </button>
+      </div>
     </div>
 
     <!-- Property Modal -->
@@ -553,6 +570,7 @@ export default {
     const downloadingFile = ref(null)
     const runningCleanup = ref(false)
     const showCleanupConfirm = ref(false)
+    const exporting = ref(false)
 
     function getEmptyPropertyForm() {
       return {
@@ -974,6 +992,37 @@ export default {
       }
     }
 
+    const exportAllData = async () => {
+      exporting.value = true
+      try {
+        const response = await api.exportAllData()
+        const blob = new Blob([response.data], { type: 'application/zip' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+
+        // Extract filename from content-disposition header or use default
+        const contentDisposition = response.headers['content-disposition']
+        let filename = 'homeregistry_export.zip'
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename=([^;]+)/)
+          if (match) {
+            filename = match[1].replace(/"/g, '')
+          }
+        }
+
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } catch (error) {
+        alert('Failed to export data: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        exporting.value = false
+      }
+    }
+
     // Formatters
     const formatPropertyType = (type) => {
       const types = {
@@ -1082,10 +1131,12 @@ export default {
       downloadingFile,
       runningCleanup,
       showCleanupConfirm,
+      exporting,
       createBackup,
       downloadCurrentDb,
       downloadBackup,
       runCleanup,
+      exportAllData,
       formatDateTime,
       formatSize
     }
