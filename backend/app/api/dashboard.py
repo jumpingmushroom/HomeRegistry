@@ -195,13 +195,15 @@ async def get_dashboard_stats(
         prop_item_value = db.query(func.sum(Item.current_value)).filter(
             Item.property_id == prop.id
         ).scalar() or 0
+        prop_item_value = float(prop_item_value)
 
         # Get total coverage from insurance policies for this property
         prop_coverage = db.query(func.sum(InsurancePolicy.coverage_amount)).filter(
             InsurancePolicy.property_id == prop.id
         ).scalar() or 0
+        prop_coverage = float(prop_coverage)
 
-        total_policy_coverage += float(prop_coverage)
+        total_policy_coverage += prop_coverage
 
         # Determine status
         if prop_item_value == 0:
@@ -216,9 +218,9 @@ async def get_dashboard_stats(
         per_property_analysis.append({
             "property_id": prop.id,
             "property_name": prop.name,
-            "inventory_value": float(prop_item_value),
-            "policy_coverage": float(prop_coverage),
-            "gap": float(prop_coverage - prop_item_value),
+            "inventory_value": prop_item_value,
+            "policy_coverage": prop_coverage,
+            "gap": prop_coverage - prop_item_value,
             "status": status
         })
 
