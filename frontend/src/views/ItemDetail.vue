@@ -194,12 +194,15 @@
         <div v-if="item.images && item.images.length > 0" style="margin-bottom: 16px;">
           <div style="width: 100%; max-width: 600px; margin: 0 auto;">
             <img :src="getImageUrl(currentImageId)"
-                 style="width: 100%; border-radius: var(--border-radius);" />
+                 @click="openImageViewer(item.images.findIndex(img => img.id === currentImageId))"
+                 style="width: 100%; border-radius: var(--border-radius); cursor: pointer;"
+                 title="Click to view larger" />
           </div>
           <div style="display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding: 8px 0;">
-            <img v-for="img in item.images" :key="img.id"
+            <img v-for="(img, idx) in item.images" :key="img.id"
                  :src="getImageUrl(img.id, true)"
                  @click="currentImageId = img.id"
+                 @dblclick="openImageViewer(idx)"
                  :style="{
                    width: '80px',
                    height: '80px',
@@ -207,9 +210,17 @@
                    borderRadius: 'var(--border-radius)',
                    cursor: 'pointer',
                    border: img.id === currentImageId ? '3px solid var(--primary-color)' : 'none'
-                 }" />
+                 }"
+                 title="Click to select, double-click to view larger" />
           </div>
         </div>
+
+        <!-- Image Viewer Modal -->
+        <ImageViewer
+          v-model="imageViewerOpen"
+          :images="item.images || []"
+          :start-index="imageViewerStartIndex"
+        />
 
         <div class="grid grid-2">
           <div>
@@ -343,9 +354,13 @@
 import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
+import ImageViewer from '../components/ImageViewer.vue'
 
 export default {
   name: 'ItemDetail',
+  components: {
+    ImageViewer
+  },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -360,6 +375,8 @@ export default {
     const newDocumentType = ref('receipt')
     const uploadingDocument = ref(false)
     const linkCopied = ref(false)
+    const imageViewerOpen = ref(false)
+    const imageViewerStartIndex = ref(0)
     const editForm = ref({
       name: '',
       description: '',
@@ -659,6 +676,11 @@ export default {
       }
     }
 
+    const openImageViewer = (index = 0) => {
+      imageViewerStartIndex.value = index
+      imageViewerOpen.value = true
+    }
+
     onMounted(async () => {
       await loadItem()
       loadCategories()
@@ -699,7 +721,10 @@ export default {
       updateEditTags,
       getQrCodeUrl,
       copyPublicLink,
-      linkCopied
+      linkCopied,
+      imageViewerOpen,
+      imageViewerStartIndex,
+      openImageViewer
     }
   }
 }
