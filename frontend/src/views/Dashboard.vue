@@ -329,7 +329,12 @@ export default {
       generatingReport.value = true
       try {
         const reportUrl = api.getInsuranceReportUrl(selectedPropertyId.value)
-        const response = await fetch(reportUrl)
+        const token = localStorage.getItem('token')
+        const response = await fetch(reportUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         if (!response.ok) throw new Error('Failed to generate report')
 
         const blob = await response.blob()
