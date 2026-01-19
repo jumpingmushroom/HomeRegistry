@@ -3,14 +3,17 @@ Backup API endpoints.
 """
 import os
 import logging
+import tempfile
+import shutil
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from ..models.user import User
 from ..services.auth_service import get_current_user
 from ..services.backup_service import backup_service
 from ..services.export_service import export_service
+from ..services.restore_service import restore_service
 from ..database import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -180,3 +183,71 @@ async def export_all_data(current_user: User = Depends(get_current_user)):
         )
     finally:
         db.close()
+
+
+@router.post("/restore")
+async def restore_from_backup(
+    file: UploadFile = File(...),
+    mode: str = Form("merge"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Restore data from a previously exported ZIP file.
+
+    Args:
+        file: The ZIP file to restore from (must be a HomeRegistry export)
+        mode: "merge" (add new items, skip existing) or "replace" (clear all data first)
+
+    Returns:
+        Summary of imported/skipped records
+    """
+    logger.info(f"Restore requested by user {current_user.id} in {mode} mode")
+
+    # Validate mode
+    if mode not in ["merge", "replace"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mode must be 'merge' or 'replace'"
+        )
+
+    # Validate file type
+    if not file.filename.endswith('.zip'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a ZIP archive"
+        )
+
+    # Save uploaded file to temp location
+    temp_dir = tempfile.mkdtemp(prefix="homeregistry_upload_")
+    temp_zip_path = os.path.join(temp_dir, "upload.zip")
+
+    try:
+        # Write uploaded file to disk
+        with open(temp_zip_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        # Perform restore
+        db = SessionLocal()
+        try:
+            result = restore_service.restore_from_zip(db, temp_zip_path, mode)
+            return {
+                "success": True,
+                "message": "Restore completed successfully",
+                "result": result
+            }
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+        except Exception as e:
+            logger.error(f"Restore failed: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Restore failed: {e}"
+            )
+        finally:
+            db.close()
+    finally:
+        # Clean up temp files
+        shutil.rmtree(temp_dir, ignore_errors=True)

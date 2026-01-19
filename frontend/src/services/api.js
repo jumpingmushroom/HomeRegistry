@@ -305,5 +305,16 @@ export default {
     return api.get('/backup/export', {
       responseType: 'blob'
     })
+  },
+
+  restoreBackup(file, mode = 'merge') {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('mode', mode)
+    return api.post('/backup/restore', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }

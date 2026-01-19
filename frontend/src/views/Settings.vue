@@ -311,6 +311,58 @@
           {{ exporting ? 'Generating Export...' : 'Download Full Export' }}
         </button>
       </div>
+
+      <!-- Restore from Backup -->
+      <div class="card" style="margin-top: 16px;">
+        <h3 style="margin-bottom: 12px;">Restore from Backup</h3>
+        <div class="info-box" style="margin-bottom: 16px;">
+          <p>Upload a previously exported ZIP file to restore your data.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Restore Mode</label>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" v-model="restoreMode" value="merge" />
+              <span><strong>Merge</strong> - Add new items, skip existing (safe)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" v-model="restoreMode" value="replace" />
+              <span><strong>Replace</strong> - Clear all data and restore from backup</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="restoreMode === 'replace'" class="warning-box" style="margin: 16px 0;">
+          <strong>Warning:</strong> Replace mode will permanently delete ALL current data including items, images, documents, categories, locations, and insurance policies. This cannot be undone!
+        </div>
+
+        <div class="form-group">
+          <label class="btn btn-primary" :style="{ opacity: restoring ? 0.6 : 1 }">
+            {{ restoring ? 'Restoring...' : 'Choose ZIP File to Restore' }}
+            <input
+              type="file"
+              @change="handleRestoreFile"
+              accept=".zip"
+              :disabled="restoring"
+              style="display: none;"
+            />
+          </label>
+        </div>
+
+        <div v-if="restoreResult" class="restore-result" style="margin-top: 16px; padding: 16px; background: var(--surface-hover); border-radius: var(--border-radius);">
+          <h4 style="margin: 0 0 12px 0; color: var(--success-color);">Restore Completed</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
+            <div v-for="(count, type) in restoreResult.imported" :key="type">
+              <strong>{{ formatRestoreType(type) }}:</strong> {{ count }} imported
+              <span v-if="restoreResult.skipped[type]">({{ restoreResult.skipped[type] }} skipped)</span>
+            </div>
+          </div>
+          <div v-if="restoreResult.files_restored" style="margin-top: 8px;">
+            <strong>Files:</strong> {{ restoreResult.files_restored.images }} images, {{ restoreResult.files_restored.documents }} documents
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Property Modal -->
@@ -586,6 +638,9 @@ export default {
     const runningCleanup = ref(false)
     const showCleanupConfirm = ref(false)
     const exporting = ref(false)
+    const restoring = ref(false)
+    const restoreMode = ref('merge')
+    const restoreResult = ref(null)
 
     function getEmptyPropertyForm() {
       return {
@@ -1039,6 +1094,50 @@ export default {
       }
     }
 
+    const handleRestoreFile = async (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Confirm if replace mode
+      if (restoreMode.value === 'replace') {
+        if (!confirm('WARNING: This will permanently delete ALL existing data and replace it with the backup. This cannot be undone!\n\nAre you sure you want to continue?')) {
+          event.target.value = ''
+          return
+        }
+      }
+
+      restoring.value = true
+      restoreResult.value = null
+
+      try {
+        const response = await api.restoreBackup(file, restoreMode.value)
+        restoreResult.value = response.data.result
+        alert('Restore completed successfully!')
+
+        // Reload data
+        await loadBackupStatus()
+        await loadBackups()
+      } catch (error) {
+        alert('Failed to restore backup: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        restoring.value = false
+        event.target.value = '' // Reset file input
+      }
+    }
+
+    const formatRestoreType = (type) => {
+      const types = {
+        properties: 'Properties',
+        categories: 'Categories',
+        locations: 'Locations',
+        items: 'Items',
+        images: 'Images',
+        documents: 'Documents',
+        insurance_policies: 'Insurance Policies'
+      }
+      return types[type] || type
+    }
+
     // Formatters
     const formatPropertyType = (type) => {
       const types = {
@@ -1148,11 +1247,16 @@ export default {
       runningCleanup,
       showCleanupConfirm,
       exporting,
+      restoring,
+      restoreMode,
+      restoreResult,
       createBackup,
       downloadCurrentDb,
       downloadBackup,
       runCleanup,
       exportAllData,
+      handleRestoreFile,
+      formatRestoreType,
       formatDateTime,
       formatSize
     }
@@ -1251,6 +1355,15 @@ export default {
 
 .info-box p:last-child {
   margin-bottom: 0;
+}
+
+.warning-box {
+  background: rgba(255, 193, 7, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  border: 1px solid #ffc107;
 }
 
 .backup-list {

@@ -143,6 +143,58 @@
             </small>
           </div>
 
+          <!-- Images Section in Edit Mode -->
+          <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 16px;">📷 Images</h3>
+
+            <div v-if="item.images && item.images.length > 0" style="margin-bottom: 16px;">
+              <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                <div v-for="img in item.images" :key="img.id"
+                     style="position: relative; width: 120px;">
+                  <img :src="getImageUrl(img.id, true)"
+                       style="width: 120px; height: 120px; object-fit: cover; border-radius: var(--border-radius);" />
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <button
+                      @click="setImageAsPrimary(img.id)"
+                      class="btn btn-outline"
+                      :style="{
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        background: img.is_primary ? 'var(--primary-color)' : 'transparent',
+                        color: img.is_primary ? 'white' : 'var(--text-primary)',
+                        border: img.is_primary ? 'none' : '1px solid var(--border-color)'
+                      }"
+                      :disabled="img.is_primary"
+                      :title="img.is_primary ? 'Primary image' : 'Set as primary'">
+                      {{ img.is_primary ? '⭐' : '☆' }}
+                    </button>
+                    <button
+                      @click="deleteImage(img.id)"
+                      class="btn"
+                      style="padding: 4px 8px; font-size: 12px; background: var(--error-color); color: white; border: none;"
+                      title="Delete image">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else style="margin-bottom: 16px; color: var(--text-secondary);">
+              No images uploaded yet.
+            </div>
+
+            <div class="form-group">
+              <label class="btn btn-primary" style="margin: 0; display: inline-block;">
+                + Add Image
+                <input type="file" @change="handleImageSelect" accept="image/jpeg,image/png,image/webp" style="display: none;" />
+              </label>
+              <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                Supported: JPG, PNG, WebP (max 20MB)
+              </small>
+            </div>
+          </div>
+
           <!-- Documents Section in Edit Mode -->
           <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
             <h3 style="margin-bottom: 16px;">📎 Documents</h3>
@@ -639,6 +691,59 @@ export default {
       }
     }
 
+    const handleImageSelect = async (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Validate file size (20MB max)
+      const maxSize = 20 * 1024 * 1024
+      if (file.size > maxSize) {
+        alert('File is too large. Maximum size is 20MB.')
+        return
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Only JPG, PNG, and WebP images are allowed.')
+        return
+      }
+
+      try {
+        await api.addItemImage(route.params.id, file)
+        await loadItem()
+        event.target.value = '' // Reset file input
+      } catch (error) {
+        alert('Failed to upload image: ' + error.message)
+      }
+    }
+
+    const deleteImage = async (imageId) => {
+      if (!confirm('Are you sure you want to delete this image?')) {
+        return
+      }
+
+      try {
+        await api.deleteImage(imageId)
+        await loadItem()
+        // Reset current image if it was deleted
+        if (currentImageId.value === imageId && item.value.images?.length > 0) {
+          currentImageId.value = item.value.images[0].id
+        }
+      } catch (error) {
+        alert('Failed to delete image: ' + error.message)
+      }
+    }
+
+    const setImageAsPrimary = async (imageId) => {
+      try {
+        await api.setPrimaryImage(imageId)
+        await loadItem()
+      } catch (error) {
+        alert('Failed to set primary image: ' + error.message)
+      }
+    }
+
     const updateEditTags = () => {
       // Convert comma-separated string to array
       editForm.value.tags = editTagsInput.value
@@ -718,6 +823,9 @@ export default {
       getDocumentIcon,
       handleDocumentSelect,
       deleteDocument,
+      handleImageSelect,
+      deleteImage,
+      setImageAsPrimary,
       updateEditTags,
       getQrCodeUrl,
       copyPublicLink,
