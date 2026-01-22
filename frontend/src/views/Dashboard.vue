@@ -27,7 +27,11 @@
         <div class="stat-card" :class="getCoverageClass(stats.insurance_analysis?.coverage_ratio)">
           <div class="stat-label">Coverage Ratio</div>
           <div class="stat-value">
-            <span class="status-icon">{{ getCoverageIcon(stats.insurance_analysis?.coverage_ratio) }}</span>
+            <span class="status-icon">
+              <Check v-if="(stats.insurance_analysis?.coverage_ratio || 0) >= 100" :size="20" />
+              <AlertTriangle v-else-if="(stats.insurance_analysis?.coverage_ratio || 0) >= 80" :size="20" />
+              <X v-else :size="20" />
+            </span>
             {{ stats.insurance_analysis?.coverage_ratio || 0 }}%
           </div>
           <div class="stat-subtext">{{ getCoverageText(stats.insurance_analysis?.coverage_ratio) }}</div>
@@ -36,7 +40,11 @@
         <div class="stat-card" :class="getDocScoreClass(stats.coverage_gaps?.documentation_score)">
           <div class="stat-label">Doc Score</div>
           <div class="stat-value">
-            <span class="status-icon">{{ getDocScoreIcon(stats.coverage_gaps?.documentation_score) }}</span>
+            <span class="status-icon">
+              <Check v-if="(stats.coverage_gaps?.documentation_score || 0) >= 80" :size="20" />
+              <AlertTriangle v-else-if="(stats.coverage_gaps?.documentation_score || 0) >= 50" :size="20" />
+              <X v-else :size="20" />
+            </span>
             {{ stats.coverage_gaps?.documentation_score || 0 }}%
           </div>
           <div class="stat-subtext">Items fully documented</div>
@@ -84,9 +92,9 @@
               <span>Items: {{ formatCurrency(prop.inventory_value) }}</span>
               <span>Policy: {{ formatCurrency(prop.policy_coverage) }}</span>
               <span class="property-status">
-                <span v-if="prop.status === 'covered'">✓ Covered</span>
-                <span v-else-if="prop.status === 'warning'">⚠️ Close</span>
-                <span v-else-if="prop.status === 'under_insured'">✗ Under-insured</span>
+                <span v-if="prop.status === 'covered'" class="status-inline"><Check :size="14" /> Covered</span>
+                <span v-else-if="prop.status === 'warning'" class="status-inline"><AlertTriangle :size="14" /> Close</span>
+                <span v-else-if="prop.status === 'under_insured'" class="status-inline"><X :size="14" /> Under-insured</span>
                 <span v-else>— No items</span>
               </span>
             </div>
@@ -108,7 +116,7 @@
             :class="{ 'has-issues': stats.coverage_gaps?.no_documents?.count > 0 }"
             @click="navigateToGap('no_documents')"
           >
-            <div class="gap-icon">📄</div>
+            <div class="gap-icon"><FileText :size="24" /></div>
             <div class="gap-label">No Receipts</div>
             <div class="gap-count">{{ stats.coverage_gaps?.no_documents?.count || 0 }} items</div>
             <div class="gap-action" v-if="stats.coverage_gaps?.no_documents?.count > 0">View →</div>
@@ -119,7 +127,7 @@
             :class="{ 'has-issues': stats.coverage_gaps?.no_images?.count > 0 }"
             @click="navigateToGap('no_images')"
           >
-            <div class="gap-icon">📷</div>
+            <div class="gap-icon"><ImageIcon :size="24" /></div>
             <div class="gap-label">No Images</div>
             <div class="gap-count">{{ stats.coverage_gaps?.no_images?.count || 0 }} items</div>
             <div class="gap-action" v-if="stats.coverage_gaps?.no_images?.count > 0">View →</div>
@@ -130,7 +138,7 @@
             :class="{ 'has-issues': stats.coverage_gaps?.high_value_undocumented?.count > 0, 'critical': stats.coverage_gaps?.high_value_undocumented?.count > 0 }"
             @click="navigateToGap('high_value_undocumented')"
           >
-            <div class="gap-icon">💰</div>
+            <div class="gap-icon"><DollarSign :size="24" /></div>
             <div class="gap-label">High-Value*</div>
             <div class="gap-count">{{ stats.coverage_gaps?.high_value_undocumented?.count || 0 }} items</div>
             <div class="gap-action" v-if="stats.coverage_gaps?.high_value_undocumented?.count > 0">View →</div>
@@ -141,7 +149,7 @@
             :class="{ 'has-issues': stats.coverage_gaps?.no_purchase_info?.count > 0 }"
             @click="navigateToGap('no_purchase_info')"
           >
-            <div class="gap-icon">🛒</div>
+            <div class="gap-icon"><ShoppingCart :size="24" /></div>
             <div class="gap-label">No Purchase Info</div>
             <div class="gap-count">{{ stats.coverage_gaps?.no_purchase_info?.count || 0 }} items</div>
             <div class="gap-action" v-if="stats.coverage_gaps?.no_purchase_info?.count > 0">View →</div>
@@ -173,8 +181,9 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom: 16px;">
-            <span v-if="stats.expiring_warranties?.length > 0">⚠️ </span>Expiring Warranties
+          <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+            <AlertTriangle v-if="stats.expiring_warranties?.length > 0" :size="18" style="color: var(--warning-color);" />
+            <span>Expiring Warranties</span>
           </h3>
           <div v-if="stats.expiring_warranties?.length > 0">
             <div v-for="item in stats.expiring_warranties.slice(0, 5)" :key="item.id"
@@ -195,8 +204,10 @@
       <!-- Items by Category/Location (collapsed by default) -->
       <div class="grid grid-2" style="margin-top: 16px;">
         <div class="card collapsible" :class="{ expanded: showCategories }">
-          <h3 @click="showCategories = !showCategories" style="cursor: pointer; margin-bottom: 0;">
-            Items by Category <span style="float: right;">{{ showCategories ? '▼' : '▶' }}</span>
+          <h3 @click="showCategories = !showCategories" style="cursor: pointer; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+            <span>Items by Category</span>
+            <ChevronDown v-if="showCategories" :size="18" />
+            <ChevronRight v-else :size="18" />
           </h3>
           <div v-show="showCategories" style="margin-top: 16px;">
             <div v-for="cat in stats.items_by_category" :key="cat.name" style="margin-bottom: 8px;">
@@ -209,8 +220,10 @@
         </div>
 
         <div class="card collapsible" :class="{ expanded: showLocations }">
-          <h3 @click="showLocations = !showLocations" style="cursor: pointer; margin-bottom: 0;">
-            Items by Location <span style="float: right;">{{ showLocations ? '▼' : '▶' }}</span>
+          <h3 @click="showLocations = !showLocations" style="cursor: pointer; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+            <span>Items by Location</span>
+            <ChevronDown v-if="showLocations" :size="18" />
+            <ChevronRight v-else :size="18" />
           </h3>
           <div v-show="showLocations" style="margin-top: 16px;">
             <div v-for="loc in stats.items_by_location" :key="loc.name" style="margin-bottom: 8px;">
@@ -230,9 +243,21 @@
 import { ref, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
+import { Check, AlertTriangle, X, FileText, ImageIcon, DollarSign, ShoppingCart, ChevronDown, ChevronRight } from 'lucide-vue-next'
 
 export default {
   name: 'Dashboard',
+  components: {
+    Check,
+    AlertTriangle,
+    X,
+    FileText,
+    ImageIcon,
+    DollarSign,
+    ShoppingCart,
+    ChevronDown,
+    ChevronRight
+  },
   setup() {
     const router = useRouter()
     const loading = ref(true)
@@ -434,6 +459,14 @@ export default {
 
 .status-icon {
   margin-right: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .status-good { border-color: var(--success-color); }

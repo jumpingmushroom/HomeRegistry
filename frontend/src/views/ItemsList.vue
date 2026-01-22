@@ -5,7 +5,7 @@
     <!-- Gap Filter Banner -->
     <div v-if="gapFilter" class="gap-filter-banner">
       <div class="gap-filter-info">
-        <span class="gap-filter-icon">🔍</span>
+        <Search :size="18" class="gap-filter-icon" />
         <span>Filtering: <strong>{{ getGapFilterLabel() }}</strong></span>
       </div>
       <button @click="clearGapFilter" class="btn btn-sm btn-outline">
@@ -110,8 +110,8 @@
               <img :src="getImageUrl(item.images[0].id, true)"
                    style="width: 100%; height: 150px; object-fit: cover;" />
             </div>
-            <div v-else style="width: 100%; height: 150px; background: var(--divider-color); display: flex; align-items: center; justify-content: center; font-size: 48px;">
-              📦
+            <div v-else style="width: 100%; height: 150px; background: var(--divider-color); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+              <Package :size="48" />
             </div>
             <div style="padding: 12px;">
               <h3 style="font-size: 16px; margin-bottom: 4px;">{{ item.name }}</h3>
@@ -226,9 +226,14 @@
 import { ref, computed, onMounted, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
+import { Search, Package } from 'lucide-vue-next'
 
 export default {
   name: 'ItemsList',
+  components: {
+    Search,
+    Package
+  },
   setup() {
     const route = useRoute()
     const router = useRouter()

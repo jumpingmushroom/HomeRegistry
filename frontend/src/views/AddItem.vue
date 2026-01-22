@@ -3,14 +3,19 @@
     <h1 style="margin-bottom: 24px;">Add New Item</h1>
 
     <div class="card">
-      <h3 style="margin-bottom: 16px;">📸 Capture or Upload Photos</h3>
+      <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <Camera :size="20" />
+        <span>Capture or Upload Photos</span>
+      </h3>
 
       <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-        <button @click="openCamera" class="btn btn-primary">
-          📷 Take Photo
+        <button @click="openCamera" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px;">
+          <Camera :size="18" />
+          <span>Take Photo</span>
         </button>
-        <label class="btn btn-outline">
-          📁 Upload from Gallery
+        <label class="btn btn-outline" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <FolderOpen :size="18" />
+          <span>Upload from Gallery</span>
           <input type="file" multiple accept="image/*" @change="handleFileSelect" style="display: none;" />
         </label>
       </div>
@@ -28,8 +33,9 @@
       <button v-if="selectedFiles.length > 0 && !analyzing && !analysisResult"
               @click="analyzeWithAI"
               class="btn btn-primary"
-              style="width: 100%; margin-top: 16px;">
-        🤖 Analyze with AI
+              style="width: 100%; margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <Bot :size="18" />
+        <span>Analyze with AI</span>
       </button>
 
       <div v-if="analyzing" class="loading">
@@ -43,7 +49,10 @@
     </div>
 
     <div v-if="analysisResult" class="card" style="margin-top: 16px;">
-      <h3 style="margin-bottom: 16px;">✨ AI Analysis Results</h3>
+      <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <Sparkles :size="20" />
+        <span>AI Analysis Results</span>
+      </h3>
       <small style="color: var(--text-secondary);">Review and edit the information below</small>
 
       <div class="form-group" style="margin-top: 16px;">
@@ -62,7 +71,7 @@
           <select v-model="form.category_id" class="select" @change="onCategoryChange">
             <option value="">Select category</option>
             <option v-if="newCategoryName" value="__new__" class="new-category-option">
-              ✨ {{ newCategoryName }} (New)
+              {{ newCategoryName }} (New)
             </option>
             <option v-for="cat in flatCategories" :key="cat.id" :value="cat.id">
               {{ cat.indent }}{{ cat.name }}
@@ -175,9 +184,16 @@
 import { ref, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
+import { Camera, FolderOpen, Bot, Sparkles } from 'lucide-vue-next'
 
 export default {
   name: 'AddItem',
+  components: {
+    Camera,
+    FolderOpen,
+    Bot,
+    Sparkles
+  },
   setup() {
     const router = useRouter()
     const selectedPropertyId = inject('selectedPropertyId')

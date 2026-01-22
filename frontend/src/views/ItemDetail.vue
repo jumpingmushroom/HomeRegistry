@@ -5,8 +5,9 @@
     </div>
 
     <div v-else-if="item">
-      <button @click="$router.push('/items')" class="btn btn-outline" style="margin-bottom: 16px;">
-        ← Back to Items
+      <button @click="$router.push('/items')" class="btn btn-outline" style="margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+        <ArrowLeft :size="18" />
+        <span>Back to Items</span>
       </button>
 
       <div class="card">
@@ -145,7 +146,10 @@
 
           <!-- Images Section in Edit Mode -->
           <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
-            <h3 style="margin-bottom: 16px;">📷 Images</h3>
+            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <ImageIcon :size="20" />
+              <span>Images</span>
+            </h3>
 
             <div v-if="item.images && item.images.length > 0" style="margin-bottom: 16px;">
               <div style="display: flex; flex-wrap: wrap; gap: 12px;">
@@ -162,18 +166,21 @@
                         fontSize: '12px',
                         background: img.is_primary ? 'var(--primary-color)' : 'transparent',
                         color: img.is_primary ? 'white' : 'var(--text-primary)',
-                        border: img.is_primary ? 'none' : '1px solid var(--border-color)'
+                        border: img.is_primary ? 'none' : '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }"
                       :disabled="img.is_primary"
                       :title="img.is_primary ? 'Primary image' : 'Set as primary'">
-                      {{ img.is_primary ? '⭐' : '☆' }}
+                      <Star :size="14" :fill="img.is_primary ? 'currentColor' : 'none'" />
                     </button>
                     <button
                       @click="deleteImage(img.id)"
                       class="btn"
-                      style="padding: 4px 8px; font-size: 12px; background: var(--error-color); color: white; border: none;"
+                      style="padding: 4px 8px; font-size: 12px; background: var(--error-color); color: white; border: none; display: flex; align-items: center; justify-content: center;"
                       title="Delete image">
-                      ✕
+                      <X :size="14" />
                     </button>
                   </div>
                 </div>
@@ -197,7 +204,10 @@
 
           <!-- Documents Section in Edit Mode -->
           <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
-            <h3 style="margin-bottom: 16px;">📎 Documents</h3>
+            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <Paperclip :size="20" />
+              <span>Documents</span>
+            </h3>
 
             <div v-if="item.documents && item.documents.length > 0" style="margin-bottom: 16px;">
               <div v-for="doc in item.documents" :key="doc.id"
@@ -350,8 +360,13 @@
                :href="getDocumentUrl(doc.id)"
                target="_blank"
                style="display: flex; align-items: center; padding: 12px; background: var(--surface-hover); border-radius: var(--border-radius); text-decoration: none; color: var(--text-primary);">
-              <div style="font-size: 32px; margin-right: 12px;">
-                {{ getDocumentIcon(doc.document_type, doc.mime_type) }}
+              <div style="margin-right: 12px; color: var(--text-secondary);">
+                <ImageIcon v-if="doc.mime_type && doc.mime_type.startsWith('image/')" :size="32" />
+                <FileText v-else-if="doc.mime_type === 'application/pdf'" :size="32" />
+                <Receipt v-else-if="doc.document_type === 'receipt'" :size="32" />
+                <BookOpen v-else-if="doc.document_type === 'manual'" :size="32" />
+                <Shield v-else-if="doc.document_type === 'warranty'" :size="32" />
+                <Paperclip v-else :size="32" />
               </div>
               <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 500; color: var(--primary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -407,11 +422,21 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 import ImageViewer from '../components/ImageViewer.vue'
+import { ArrowLeft, ImageIcon, Paperclip, Star, X, FileText, Receipt, BookOpen, Shield } from 'lucide-vue-next'
 
 export default {
   name: 'ItemDetail',
   components: {
-    ImageViewer
+    ImageViewer,
+    ArrowLeft,
+    ImageIcon,
+    Paperclip,
+    Star,
+    X,
+    FileText,
+    Receipt,
+    BookOpen,
+    Shield
   },
   setup() {
     const route = useRoute()

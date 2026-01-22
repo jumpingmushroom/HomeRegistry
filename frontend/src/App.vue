@@ -18,7 +18,8 @@
         <div class="nav-right">
           <span v-if="currentUser" class="user-info">{{ currentUser.username }}</span>
           <button @click="toggleDarkMode" class="theme-toggle" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-            {{ isDarkMode ? '☀️' : '🌙' }}
+            <Sun v-if="isDarkMode" :size="20" />
+            <Moon v-else :size="20" />
           </button>
           <button v-if="isAuthenticated" @click="handleLogout" class="logout-btn" title="Logout">
             Logout
@@ -31,19 +32,19 @@
 
     <nav class="bottom-nav" v-if="showNav">
       <router-link to="/" class="bottom-nav-item" :class="{ active: $route.path === '/' }">
-        <div class="bottom-nav-icon">📊</div>
+        <div class="bottom-nav-icon"><LayoutDashboard :size="24" /></div>
         <div>Dashboard</div>
       </router-link>
       <router-link to="/items" class="bottom-nav-item" :class="{ active: $route.path.startsWith('/items') && $route.path !== '/items/add' }">
-        <div class="bottom-nav-icon">📦</div>
+        <div class="bottom-nav-icon"><Package :size="24" /></div>
         <div>Items</div>
       </router-link>
       <router-link to="/items/add" class="bottom-nav-item" :class="{ active: $route.path === '/items/add' }">
-        <div class="bottom-nav-icon">📸</div>
+        <div class="bottom-nav-icon"><Camera :size="24" /></div>
         <div>Add</div>
       </router-link>
       <router-link to="/settings" class="bottom-nav-item" :class="{ active: $route.path === '/settings' }">
-        <div class="bottom-nav-icon">⚙️</div>
+        <div class="bottom-nav-icon"><Settings :size="24" /></div>
         <div>Settings</div>
       </router-link>
     </nav>
@@ -55,9 +56,18 @@ import { computed, onMounted, ref, provide, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from './services/api'
 import { useAuthStore } from './stores/auth'
+import { Sun, Moon, LayoutDashboard, Package, Camera, Settings } from 'lucide-vue-next'
 
 export default {
   name: 'App',
+  components: {
+    Sun,
+    Moon,
+    LayoutDashboard,
+    Package,
+    Camera,
+    Settings
+  },
   setup() {
     const router = useRouter()
     const route = useRoute()

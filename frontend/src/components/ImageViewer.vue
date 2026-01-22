@@ -3,10 +3,7 @@
     <div v-if="isOpen" class="image-viewer-overlay" @click="handleOverlayClick">
       <!-- Close button -->
       <button class="close-btn" @click="close" aria-label="Close">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+        <X :size="24" />
       </button>
 
       <!-- Image counter -->
@@ -14,14 +11,10 @@
 
       <!-- Navigation arrows (desktop) -->
       <button v-if="images.length > 1" class="nav-btn nav-prev" @click.stop="prevImage" aria-label="Previous image">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
+        <ChevronLeft :size="24" />
       </button>
       <button v-if="images.length > 1" class="nav-btn nav-next" @click.stop="nextImage" aria-label="Next image">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
+        <ChevronRight :size="24" />
       </button>
 
       <!-- Image container -->
@@ -62,9 +55,15 @@
 <script>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import api from '../services/api'
+import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 export default {
   name: 'ImageViewer',
+  components: {
+    X,
+    ChevronLeft,
+    ChevronRight
+  },
   props: {
     modelValue: {
       type: Boolean,
