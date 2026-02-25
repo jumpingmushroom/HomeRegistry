@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, subqueryload
 from sqlalchemy import or_
 from typing import List, Optional
 import tempfile
@@ -258,30 +258,24 @@ async def get_items(
     # Get total count
     total = query.count()
 
-    # Get items
-    items = query.offset(skip).limit(limit).all()
+    # Get items with optimized relationship loading
+    items = query.options(
+        joinedload(Item.property),
+        joinedload(Item.category),
+        joinedload(Item.location),
+        subqueryload(Item.images),
+        subqueryload(Item.documents)
+    ).offset(skip).limit(limit).all()
 
     # Convert to response
     item_responses = []
     for item in items:
-        images = [ImageResponse.model_validate(img) for img in item.images]
-        documents = [DocumentResponse.model_validate(doc) for doc in item.documents]
-        # Create dict excluding SQLAlchemy internal fields and relationships
-        item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
-        item_dict.pop('images', None)
-        item_dict.pop('documents', None)
-        item_dict.pop('category', None)
-        item_dict.pop('location', None)
-        item_dict.pop('property', None)
-
-        item_response = ItemResponse(
-            **item_dict,
-            images=images,
-            documents=documents,
-            property_name=item.property.name if item.property else None,
-            category_name=item.category.name if item.category else None,
-            location_name=item.location.name if item.location else None
-        )
+        item_response = ItemResponse.model_validate(item)
+        # Manually set name fields if they weren't picked up correctly by model_validate
+        # (though they should be if property_name etc are mapped in ItemResponse)
+        item_response.property_name = item.property.name if item.property else None
+        item_response.category_name = item.category.name if item.category else None
+        item_response.location_name = item.location.name if item.location else None
         item_responses.append(item_response)
 
     return ItemListResponse(
@@ -300,23 +294,12 @@ async def create_item(item: ItemCreate, db: Session = Depends(get_db), current_u
     db.commit()
     db.refresh(db_item)
 
-    documents = [DocumentResponse.model_validate(doc) for doc in db_item.documents]
-    # Create dict excluding SQLAlchemy internal fields and relationships
-    item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
-    item_dict.pop('images', None)
-    item_dict.pop('documents', None)
-    item_dict.pop('category', None)
-    item_dict.pop('location', None)
-    item_dict.pop('property', None)
+    item_response = ItemResponse.model_validate(db_item)
+    item_response.property_name = db_item.property.name if db_item.property else None
+    item_response.category_name = db_item.category.name if db_item.category else None
+    item_response.location_name = db_item.location.name if db_item.location else None
 
-    return ItemResponse(
-        **item_dict,
-        images=[],
-        documents=documents,
-        property_name=db_item.property.name if db_item.property else None,
-        category_name=db_item.category.name if db_item.category else None,
-        location_name=db_item.location.name if db_item.location else None
-    )
+    return item_response
 
 
 @router.post("/batch-update", response_model=BatchUpdateResponse)
@@ -381,25 +364,12 @@ async def get_item(item_id: str, db: Session = Depends(get_db), current_user: Us
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    images = [ImageResponse.model_validate(img) for img in item.images]
-    documents = [DocumentResponse.model_validate(doc) for doc in item.documents]
+    item_response = ItemResponse.model_validate(item)
+    item_response.property_name = item.property.name if item.property else None
+    item_response.category_name = item.category.name if item.category else None
+    item_response.location_name = item.location.name if item.location else None
 
-    # Create dict excluding SQLAlchemy internal fields and relationships
-    item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
-    item_dict.pop('images', None)
-    item_dict.pop('documents', None)
-    item_dict.pop('category', None)
-    item_dict.pop('location', None)
-    item_dict.pop('property', None)
-
-    return ItemResponse(
-        **item_dict,
-        images=images,
-        documents=documents,
-        property_name=item.property.name if item.property else None,
-        category_name=item.category.name if item.category else None,
-        location_name=item.location.name if item.location else None
-    )
+    return item_response
 
 
 @router.put("/{item_id}", response_model=ItemResponse)
@@ -416,25 +386,12 @@ async def update_item(item_id: str, item: ItemUpdate, db: Session = Depends(get_
     db.commit()
     db.refresh(db_item)
 
-    images = [ImageResponse.model_validate(img) for img in db_item.images]
-    documents = [DocumentResponse.model_validate(doc) for doc in db_item.documents]
+    item_response = ItemResponse.model_validate(db_item)
+    item_response.property_name = db_item.property.name if db_item.property else None
+    item_response.category_name = db_item.category.name if db_item.category else None
+    item_response.location_name = db_item.location.name if db_item.location else None
 
-    # Create dict excluding SQLAlchemy internal fields and relationships
-    item_dict = {k: v for k, v in db_item.__dict__.items() if not k.startswith('_')}
-    item_dict.pop('images', None)
-    item_dict.pop('documents', None)
-    item_dict.pop('category', None)
-    item_dict.pop('location', None)
-    item_dict.pop('property', None)
-
-    return ItemResponse(
-        **item_dict,
-        images=images,
-        documents=documents,
-        property_name=db_item.property.name if db_item.property else None,
-        category_name=db_item.category.name if db_item.category else None,
-        location_name=db_item.location.name if db_item.location else None
-    )
+    return item_response
 
 
 @router.delete("/{item_id}")

@@ -9,7 +9,7 @@ class Image(Base):
     __tablename__ = "images"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    item_id = Column(String(36), ForeignKey("items.id", ondelete="CASCADE"), nullable=False)
+    item_id = Column(String(36), ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True)
     filename = Column(String(255), nullable=False)  # Stored filename
     original_filename = Column(String(255), nullable=False)  # Original upload name
     file_size = Column(Integer, nullable=False)

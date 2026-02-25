@@ -8,7 +8,7 @@ class ClaudeProvider(AIProvider):
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.client = anthropic.Anthropic(api_key=api_key)
+        self.client = anthropic.AsyncAnthropic(api_key=api_key)
 
     async def analyze_images(self, image_paths: List[str], prompt: str) -> Dict[str, Any]:
         """Analyze images using Claude Vision"""
@@ -47,7 +47,7 @@ class ClaudeProvider(AIProvider):
             })
 
             # Make API call
-            message = self.client.messages.create(
+            message = await self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=1024,
                 messages=[{
@@ -67,7 +67,7 @@ class ClaudeProvider(AIProvider):
         """Test Claude API connection"""
         try:
             # Make a simple API call to test connection
-            message = self.client.messages.create(
+            message = await self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=10,
                 messages=[{

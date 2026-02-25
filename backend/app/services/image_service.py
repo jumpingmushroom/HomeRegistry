@@ -3,6 +3,8 @@ import os
 import uuid
 from typing import Tuple
 import io
+import asyncio
+import functools
 from ..config import settings
 
 
@@ -15,18 +17,20 @@ class ImageService:
 
     async def save_image(self, file_content: bytes, original_filename: str) -> Tuple[str, str, int, int, int]:
         """
-        Save image and create thumbnail
-
-        Args:
-            file_content: Image file content in bytes
-            original_filename: Original filename
-
-        Returns:
-            Tuple of (filename, thumbnail_filename, file_size, width, height)
+        Save image and create thumbnail using run_in_executor to avoid blocking
         """
-        # Generate unique filename
-        ext = original_filename.split(".")[-1].lower()
-        filename = f"{uuid.uuid4()}.{ext}"
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, 
+            self._process_and_save, 
+            file_content, 
+            original_filename
+        )
+
+    def _process_and_save(self, file_content: bytes, original_filename: str) -> Tuple[str, str, int, int, int]:
+        """Synchronous part of image processing"""
+        # Generate unique filename - prefer webp for efficiency
+        filename = f"{uuid.uuid4()}.webp"
         filepath = os.path.join(self.images_path, filename)
 
         # Open image
@@ -43,49 +47,41 @@ class ImageService:
             image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
             width, height = image.size
 
-        # Convert RGBA to RGB if needed (for JPEG)
-        if image.mode == "RGBA" and ext in ["jpg", "jpeg"]:
-            rgb_image = Image.new("RGB", image.size, (255, 255, 255))
-            rgb_image.paste(image, mask=image.split()[3])
-            image = rgb_image
+        # Convert RGBA to RGB if needed (WebP supports alpha, but we might want to flatten)
+        if image.mode == "RGBA":
+            # If we want to keep alpha, we can. But usually for photos it's not needed.
+            # Let's keep it for WebP, but flatten for specific use cases if needed.
+            pass
 
-        # Save optimized image
-        if ext in ["jpg", "jpeg"]:
-            image.save(filepath, "JPEG", quality=85, optimize=True)
-        elif ext == "png":
-            image.save(filepath, "PNG", optimize=True)
-        elif ext == "webp":
-            image.save(filepath, "WEBP", quality=85)
-        else:
-            image.save(filepath)
+        # Save as WebP for best compression/quality ratio
+        image.save(filepath, "WEBP", quality=80, method=6) # method 6 is slowest but best compression
 
         # Get file size
         file_size = os.path.getsize(filepath)
 
         # Create thumbnail
-        thumbnail_filename = await self._create_thumbnail(image, filename)
+        thumbnail_filename = self._sync_create_thumbnail(image, filename)
 
         return filename, thumbnail_filename, file_size, width, height
 
-    async def _create_thumbnail(self, image: Image.Image, filename: str) -> str:
-        """Create thumbnail from image"""
+    def _sync_create_thumbnail(self, image: Image.Image, filename: str) -> str:
+        """Create thumbnail from image (synchronous)"""
         # Create thumbnail (300x300)
         thumbnail = image.copy()
         thumbnail.thumbnail((300, 300), Image.Resampling.LANCZOS)
 
         # Save as WebP for better compression
-        thumbnail_filename = f"{filename.rsplit('.', 1)[0]}.webp"
+        thumbnail_filename = f"{filename.rsplit('.', 1)[0]}_thumb.webp"
         thumbnail_path = os.path.join(self.thumbnails_path, thumbnail_filename)
 
-        # Convert RGBA to RGB if needed
-        if thumbnail.mode == "RGBA":
-            rgb_thumbnail = Image.new("RGB", thumbnail.size, (255, 255, 255))
-            rgb_thumbnail.paste(thumbnail, mask=thumbnail.split()[3])
-            thumbnail = rgb_thumbnail
-
-        thumbnail.save(thumbnail_path, "WEBP", quality=80)
+        thumbnail.save(thumbnail_path, "WEBP", quality=75)
 
         return thumbnail_filename
+
+    async def _create_thumbnail(self, image: Image.Image, filename: str) -> str:
+        # This is now handled by _sync_create_thumbnail, but keeping for compatibility if needed
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._sync_create_thumbnail, image, filename)
 
     async def delete_image(self, filename: str, thumbnail_filename: str = None):
         """Delete image and thumbnail"""

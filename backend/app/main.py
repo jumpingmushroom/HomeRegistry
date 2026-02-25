@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from .database import init_db
@@ -38,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Gzip compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include routers
 app.include_router(auth.router)

@@ -8,7 +8,7 @@ class OpenAIProvider(AIProvider):
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.client = openai.OpenAI(api_key=api_key)
+        self.client = openai.AsyncOpenAI(api_key=api_key)
 
     async def analyze_images(self, image_paths: List[str], prompt: str) -> Dict[str, Any]:
         """Analyze images using GPT-4 Vision"""
@@ -45,7 +45,7 @@ class OpenAIProvider(AIProvider):
             })
 
             # Make API call
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{
                     "role": "user",
@@ -65,7 +65,7 @@ class OpenAIProvider(AIProvider):
         """Test OpenAI API connection"""
         try:
             # Make a simple API call to test connection
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{
                     "role": "user",

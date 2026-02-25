@@ -1,74 +1,63 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Dashboard from '../views/Dashboard.vue'
-import ItemsList from '../views/ItemsList.vue'
-import AddItem from '../views/AddItem.vue'
-import ItemDetail from '../views/ItemDetail.vue'
-import Locations from '../views/Locations.vue'
-import Categories from '../views/Categories.vue'
-import Settings from '../views/Settings.vue'
-import Setup from '../views/Setup.vue'
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
-import PublicItemView from '../views/PublicItemView.vue'
 
 const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: () => import('../views/Login.vue'),
     meta: { public: true }
   },
   {
     path: '/register',
     name: 'Register',
-    component: Register,
+    component: () => import('../views/Register.vue'),
     meta: { public: true }
   },
   {
     path: '/public/items/:id',
     name: 'PublicItemView',
-    component: PublicItemView,
+    component: () => import('../views/PublicItemView.vue'),
     meta: { public: true }
   },
   {
     path: '/',
     name: 'Dashboard',
-    component: Dashboard
+    component: () => import('../views/Dashboard.vue')
   },
   {
     path: '/items',
     name: 'Items',
-    component: ItemsList
+    component: () => import('../views/ItemsList.vue')
   },
   {
     path: '/items/add',
     name: 'AddItem',
-    component: AddItem
+    component: () => import('../views/AddItem.vue')
   },
   {
     path: '/items/:id',
     name: 'ItemDetail',
-    component: ItemDetail
+    component: () => import('../views/ItemDetail.vue')
   },
   {
     path: '/locations',
     name: 'Locations',
-    component: Locations
+    component: () => import('../views/Locations.vue')
   },
   {
     path: '/categories',
     name: 'Categories',
-    component: Categories
+    component: () => import('../views/Categories.vue')
   },
   {
     path: '/settings',
     name: 'Settings',
-    component: Settings
+    component: () => import('../views/Settings.vue')
   },
   {
     path: '/setup',
     name: 'Setup',
-    component: Setup,
+    component: () => import('../views/Setup.vue'),
     meta: { public: true }
   }
 ]

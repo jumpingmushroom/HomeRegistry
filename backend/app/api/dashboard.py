@@ -32,11 +32,14 @@ async def get_dashboard_stats(
     # Get high value threshold from settings
     high_value_threshold = get_setting_value(db, "high_value_threshold", 5000)
 
-    # Total items
-    total_items = db.query(func.count(Item.id)).filter(item_filter).scalar()
-
-    # Total inventory value
-    total_value = db.query(func.sum(Item.current_value)).filter(item_filter).scalar() or 0
+    # Combined query for total items and total value
+    stats = db.query(
+        func.count(Item.id),
+        func.sum(Item.current_value)
+    ).filter(item_filter).first()
+    
+    total_items = stats[0] or 0
+    total_value = stats[1] or 0
 
     # Items by category
     items_by_category_query = db.query(
@@ -116,26 +119,23 @@ async def get_dashboard_stats(
     no_docs_query = db.query(Item).filter(item_filter).filter(
         ~Item.id.in_(items_with_docs_subquery)
     )
-    items_no_documents = no_docs_query.all()
-    no_documents_count = len(items_no_documents)
-    no_documents_ids = [item.id for item in items_no_documents]
+    no_documents_count = no_docs_query.count()
+    no_documents_ids = [row[0] for row in no_docs_query.with_entities(Item.id).limit(50).all()]
 
     # Items without images
     no_images_query = db.query(Item).filter(item_filter).filter(
         ~Item.id.in_(items_with_images_subquery)
     )
-    items_no_images = no_images_query.all()
-    no_images_count = len(items_no_images)
-    no_images_ids = [item.id for item in items_no_images]
+    no_images_count = no_images_query.count()
+    no_images_ids = [row[0] for row in no_images_query.with_entities(Item.id).limit(50).all()]
 
     # High-value items without documentation
     high_value_undoc_query = db.query(Item).filter(item_filter).filter(
         Item.current_value >= high_value_threshold,
         ~Item.id.in_(items_with_docs_subquery)
     )
-    items_high_value_undoc = high_value_undoc_query.all()
-    high_value_undoc_count = len(items_high_value_undoc)
-    high_value_undoc_ids = [item.id for item in items_high_value_undoc]
+    high_value_undoc_count = high_value_undoc_query.count()
+    high_value_undoc_ids = [row[0] for row in high_value_undoc_query.with_entities(Item.id).limit(50).all()]
 
     # Items missing purchase info (no price OR no date)
     no_purchase_query = db.query(Item).filter(item_filter).filter(
@@ -144,9 +144,8 @@ async def get_dashboard_stats(
             Item.purchase_date.is_(None)
         )
     )
-    items_no_purchase = no_purchase_query.all()
-    no_purchase_count = len(items_no_purchase)
-    no_purchase_ids = [item.id for item in items_no_purchase]
+    no_purchase_count = no_purchase_query.count()
+    no_purchase_ids = [row[0] for row in no_purchase_query.with_entities(Item.id).limit(50).all()]
 
     # Documentation score (% of items that have both images AND documents)
     items_fully_documented = db.query(Item).filter(item_filter).filter(
@@ -179,30 +178,40 @@ async def get_dashboard_stats(
 
     # ============== INSURANCE COVERAGE ANALYSIS ==============
 
-    # Get all properties with their insurance policies and item values
+    # Pre-calculate inventory values per property
+    prop_values_query = db.query(
+        Item.property_id,
+        func.sum(Item.current_value).label("total_value")
+    ).filter(Item.property_id.isnot(None))
+    
     if property_id:
-        properties_query = db.query(Property).filter(Property.id == property_id)
-    else:
-        properties_query = db.query(Property)
+        prop_values_query = prop_values_query.filter(Item.property_id == property_id)
+        
+    prop_values = {row[0]: float(row[1] or 0) for row in prop_values_query.group_by(Item.property_id).all()}
 
-    properties = properties_query.all()
+    # Pre-calculate insurance coverage per property
+    prop_coverage_query = db.query(
+        InsurancePolicy.property_id,
+        func.sum(InsurancePolicy.coverage_amount).label("total_coverage")
+    ).filter(InsurancePolicy.property_id.isnot(None))
+    
+    if property_id:
+        prop_coverage_query = prop_coverage_query.filter(InsurancePolicy.property_id == property_id)
+        
+    prop_coverages = {row[0]: float(row[1] or 0) for row in prop_coverage_query.group_by(InsurancePolicy.property_id).all()}
+
+    # Get properties
+    if property_id:
+        properties = db.query(Property).filter(Property.id == property_id).all()
+    else:
+        properties = db.query(Property).all()
 
     total_policy_coverage = 0
     per_property_analysis = []
 
     for prop in properties:
-        # Get total value of items in this property
-        prop_item_value = db.query(func.sum(Item.current_value)).filter(
-            Item.property_id == prop.id
-        ).scalar() or 0
-        prop_item_value = float(prop_item_value)
-
-        # Get total coverage from insurance policies for this property
-        prop_coverage = db.query(func.sum(InsurancePolicy.coverage_amount)).filter(
-            InsurancePolicy.property_id == prop.id
-        ).scalar() or 0
-        prop_coverage = float(prop_coverage)
-
+        prop_item_value = prop_values.get(prop.id, 0.0)
+        prop_coverage = prop_coverages.get(prop.id, 0.0)
         total_policy_coverage += prop_coverage
 
         # Determine status

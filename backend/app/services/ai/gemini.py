@@ -30,7 +30,7 @@ class GeminiProvider(AIProvider):
                 parts.append(img)
 
             # Generate content
-            response = self.model.generate_content(parts)
+            response = await self.model.generate_content_async(parts)
 
             # Parse response
             response_text = response.text
@@ -43,7 +43,7 @@ class GeminiProvider(AIProvider):
         """Test Gemini API connection"""
         try:
             # Make a simple text-only API call to test connection
-            response = self.model.generate_content("Hi")
+            response = await self.model.generate_content_async("Hi")
 
             # If we got a response, connection is successful
             if response and response.text:
