@@ -3,7 +3,6 @@ version: '3.8'
 services:
   backend:
     build: ./backend
-    container_name: homeregistry-backend
     environment:
       - DATABASE_URL=/data/homeregistry.db
       - IMAGES_PATH=/data/images
@@ -18,7 +17,8 @@ services:
       - MAX_DOCUMENT_SIZE_MB=${MAX_DOCUMENT_SIZE_MB:-50}
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
-      - CORS_ORIGINS_STR=http://localhost,http://localhost:8080,http://localhost:8180
+      - CORS_ORIGINS_STR=${CORS_ORIGINS_STR:-http://localhost,http://localhost:8080,http://localhost:8180}
+      - TZ=${TZ:-UTC}
     volumes:
       - homeregistry-data:/data
     networks:
@@ -32,33 +32,15 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: homeregistry-frontend
-    ports:
-      - "8180:80"
     depends_on:
       - backend
     networks:
       - homeregistry-network
     restart: unless-stopped
 
-  # Optional: Uncomment to use local Ollama for AI
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: homeregistry-ollama
-  #   volumes:
-  #     - ollama-data:/root/.ollama
-  #   ports:
-  #     - "11434:11434"
-  #   networks:
-  #     - homeregistry-network
-  #   restart: unless-stopped
-  #   # After starting, run: docker exec -it homeregistry-ollama ollama pull llava
-
 volumes:
   homeregistry-data:
     driver: local
-  # ollama-data:
-  #   driver: local
 
 networks:
   homeregistry-network:
